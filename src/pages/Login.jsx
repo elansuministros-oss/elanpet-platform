@@ -29,12 +29,7 @@ export default function Login({ setPage, destino }) {
           {error && <small className="error-text">{error}</small>}
           <button type="submit"><LockKeyhole size={18} /> Entrar</button>
         </form>
-        <div className="demo-box">
-  <h3>Demo de prueba</h3>
-  <p>Admin: admin@elanpet.com</p>
-  <p>Veterinaria: vet@elanpet.com</p>
-  <p>Contraseña: cualquier texto</p>
-</div>
+        
       </section>
     </main>
   );

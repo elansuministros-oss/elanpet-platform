@@ -15,7 +15,7 @@ import './styles/global.css';
 
 export default function App() {
   const [page, setPage] = useState('home');
-  const { usuario, configuracion } = useApp();
+  const { usuario, configuracion, logout } = useApp();
   useEffect(() => {
     document.documentElement.style.setProperty('--azul', configuracion.colorPrincipal || '#1E5AA8');
     document.documentElement.style.setProperty('--teal', configuracion.colorSecundario || '#058B8C');

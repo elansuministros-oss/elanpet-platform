@@ -170,13 +170,37 @@ export function AppProvider({ children }) {
     return pedidos.find((p) => String(p.codigoSeguimiento || '').toUpperCase() === c && String(p.cliente?.whatsapp || '').replace(/[^0-9]/g, '').endsWith(w.slice(-8)));
   };
 
-  const login = ({ email, password }) => {
-    const correo = String(email || '').toLowerCase().trim();
-    if (correo.includes('admin')) { setUsuario({ nombre: 'Administrador ELAN', email: correo, rol: 'admin' }); return { ok: true, rol: 'admin' }; }
-    if (correo.includes('vet') || password) { setUsuario({ nombre: 'Veterinaria Demo', email: correo || 'vet@elanpet.com', rol: 'veterinaria', veterinariaId: veterinaria.id }); return { ok: true, rol: 'veterinaria' }; }
-    return { ok: false };
-  };
-  const logout = () => setUsuario(null);
+ const login = ({ email, password }) => {
+  const correo = String(email || '').toLowerCase().trim();
+  const clave = String(password || '').trim();
+
+  if (
+    correo === 'elansuministros@gmail.com' &&
+    clave === 'ElanPet2026#'
+  ) {
+    setUsuario({
+      nombre: 'Erick Cano',
+      email: correo,
+      rol: 'admin'
+    });
+    return { ok: true, rol: 'admin' };
+  }
+
+  if (
+    correo === 'vet@elanpet.com' &&
+    clave === 'VetDemo2026#'
+  ) {
+    setUsuario({
+      nombre: 'Veterinaria Demo',
+      email: correo,
+      rol: 'veterinaria',
+      veterinariaId: veterinaria.id
+    });
+    return { ok: true, rol: 'veterinaria' };
+  }
+
+  return { ok: false };
+};
 
   const actualizarProducto = (producto) => setProductos((prev) => prev.map((p) => p.id === producto.id ? { ...p, ...producto } : p));
   const crearProducto = (producto) => {

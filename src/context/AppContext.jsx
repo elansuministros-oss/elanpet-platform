@@ -202,6 +202,10 @@ export function AppProvider({ children }) {
   return { ok: false };
 };
 
+const logout = () => {
+  setUsuario(null);
+};
+
   const actualizarProducto = (producto) => setProductos((prev) => prev.map((p) => p.id === producto.id ? { ...p, ...producto } : p));
   const crearProducto = (producto) => {
     const id = producto.id || producto.nombre.toLowerCase().replaceAll(' ', '-').replace(/[^a-z0-9-]/g, '');

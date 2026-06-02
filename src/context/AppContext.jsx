@@ -201,7 +201,6 @@ export function AppProvider({ children }) {
 
   return { ok: false };
 };
-
 const logout = () => {
   setUsuario(null);
 };

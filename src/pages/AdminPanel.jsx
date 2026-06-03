@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CreditCard, ImagePlus, Megaphone, Plus, Save, Settings, Store } from 'lucide-react';
 import { estadosProduccion, etiquetasEstado, useApp } from '../context/AppContext';
 import { formatoC$ } from '../lib/calculos';
+import ImageUploader from '../components/ImageUploader';
 
 export default function AdminPanel() {
   const {
@@ -104,7 +105,18 @@ export default function AdminPanel() {
           <input placeholder="Categoría" value={nuevoProducto.categoria} onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria: e.target.value })} />
           <input placeholder="Medidas" value={nuevoProducto.medidas} onChange={(e) => setNuevoProducto({ ...nuevoProducto, medidas: e.target.value })} />
           <input placeholder="Precio" type="number" value={nuevoProducto.precio} onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })} />
-          <input className="span-2" placeholder="URL imagen o ruta /productos/foto.jpg" value={nuevoProducto.imagen} onChange={(e) => setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })} />
+<div className="span-2">
+  <ImageUploader
+    label="Imagen principal del producto"
+    value={nuevoProducto.imagen}
+    onChange={(img) =>
+      setNuevoProducto({
+        ...nuevoProducto,
+        imagen: img,
+      })
+    }
+  />
+</div>
           <input className="span-2" placeholder="Descripción" value={nuevoProducto.descripcion} onChange={(e) => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} />
           <button><Plus size={18} /> Nuevo producto</button>
         </form>

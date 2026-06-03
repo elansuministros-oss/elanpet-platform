@@ -40,3 +40,47 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
 /* V7: anticipo, seguimiento y producción */
 .payment-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.option{border:1px solid var(--borde);background:white;border-radius:18px;padding:14px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;cursor:pointer}.option.active{border-color:var(--teal);box-shadow:0 0 0 3px #058b8c16;background:#f4fffd}.option input{width:auto;margin-top:4px}.option span{display:grid;gap:4px}.option b{color:var(--azul-oscuro)}.option small{color:var(--muted);line-height:1.35}.option strong{font-size:20px;color:var(--teal)}.send-full{width:100%;margin-top:8px}.tracking-page h1{font-size:44px;color:var(--azul-oscuro);margin:14px 0 6px}.tracking-card{margin-bottom:18px}.tracking-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.tracking-summary div{background:#F4F8FC;border:1px solid var(--borde);border-radius:16px;padding:14px}.tracking-summary b{display:block;color:var(--azul-oscuro);margin-bottom:5px}.tracking-summary span{color:var(--teal);font-size:20px;font-weight:900}.timeline{display:grid;gap:10px;margin-top:16px}.timeline-step{display:grid;grid-template-columns:34px 1fr;align-items:center;border:1px solid var(--borde);border-radius:16px;padding:12px;background:#FBFCFE;color:#8a97aa}.timeline-step span{font-size:20px}.timeline-step.done{background:#E8FBF8;border-color:#bcece7;color:var(--azul-oscuro)}.timeline-step.done span{color:var(--teal)}select{font-family:inherit;padding:13px;border:1px solid #d7dde6;border-radius:12px;background:white;color:var(--azul-oscuro);font-weight:800}
 @media(max-width:700px){.payment-options,.tracking-summary{grid-template-columns:1fr}.tracking-page h1{font-size:34px}.tracking-card .form-grid button{width:100%}}
+.image-uploader {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.image-uploader label {
+  font-weight: 700;
+  color: #062b55;
+}
+
+.image-preview {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f5f7fa;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-uploader input[type="file"] {
+  padding: 10px;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.image-uploader button {
+  width: fit-content;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}

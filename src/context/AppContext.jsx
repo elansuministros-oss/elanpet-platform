@@ -1,3 +1,4 @@
+import MediaLibrary from '../components/MediaLibrary';
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { productosIniciales, veterinariaDemo } from '../data/productos';
 import { resumenCarrito } from '../lib/calculos';
@@ -82,6 +83,17 @@ export function AppProvider({ children }) {
   const [banners, setBanners] = useState(bannersIniciales);
   const [trabajos, setTrabajos] = useState(trabajosIniciales);
   const [productos, setProductos] = useState(productosIniciales);
+  const [imagenes, setImagenes] = useState([]);
+
+  
+
+const crearImagen = (imagen) => {
+  setImagenes((prev) => [imagen, ...prev]);
+};
+
+const eliminarImagen = (id) => {
+  setImagenes((prev) => prev.filter((img) => img.id !== id));
+};
   const [veterinarias, setVeterinarias] = useState(veterinariasIniciales);
   const [veterinaria, setVeterinaria] = useState(veterinariaDemo);
   const [carrito, setCarrito] = useState([]);
@@ -217,6 +229,7 @@ const logout = () => {
   const crearCuentaBancaria = (cuenta) => setCuentasBancarias((prev) => [{ ...cuenta, id: `cta-${Date.now()}`, activa: true }, ...prev]);
   const actualizarCuentaBancaria = (cuenta) => setCuentasBancarias((prev) => prev.map((c) => c.id === cuenta.id ? { ...c, ...cuenta } : c));
 
-  return <AppContext.Provider value={{ configuracion, setConfiguracion, cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria, banners, crearBanner, actualizarBanner, trabajos, crearTrabajo, actualizarTrabajo, productos, setProductos, actualizarProducto, crearProducto, veterinarias, setVeterinarias, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={{ configuracion, setConfiguracion, cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria, banners, crearBanner, actualizarBanner, trabajos, crearTrabajo, actualizarTrabajo, productos, setProductos, actualizarProducto,imagenes,
+crearImagen, eliminarImagen, crearProducto, veterinarias, setVeterinarias, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
 }
 export const useApp = () => useContext(AppContext);

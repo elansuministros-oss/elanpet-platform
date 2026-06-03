@@ -1,3 +1,4 @@
+import MediaLibrary from '../components/MediaLibrary';
 import React, { useState } from 'react';
 import { CreditCard, ImagePlus, Megaphone, Plus, Save, Settings, Store } from 'lucide-react';
 import { estadosProduccion, etiquetasEstado, useApp } from '../context/AppContext';
@@ -5,7 +6,7 @@ import { formatoC$ } from '../lib/calculos';
 import ImageUploader from '../components/ImageUploader';
 
 export default function AdminPanel() {
-  const {
+  const {imagenes, crearImagen, eliminarImagen,
     productos, crearProducto, actualizarProducto,
     veterinarias,
     banners, crearBanner, actualizarBanner,
@@ -17,13 +18,13 @@ export default function AdminPanel() {
 
   const [tab, setTab] = useState('dashboard');
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', categoria: 'Casas para perros', descripcion: '', medidas: '', precio: '', imagen: '' });
+const [productoEditando, setProductoEditando] = useState(null);
   const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'slider-home', link: 'catalogo', imagen: '', activo: true });
   const [nuevoTrabajo, setNuevoTrabajo] = useState({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' });
   const [nuevaCuenta, setNuevaCuenta] = useState({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
 
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
-  const tabs = ['dashboard', 'productos', 'banners', 'trabajos', 'identidad', 'cuentas', 'pedidos', 'produccion', 'veterinarias'];
-
+const tabs = ['dashboard', 'productos', 'banners', 'trabajos', 'multimedia', 'identidad', 'cuentas', 'pedidos'];
   const agregarProducto = (e) => {
     e.preventDefault();
     if (!nuevoProducto.nombre || !nuevoProducto.precio) return;
@@ -80,12 +81,30 @@ export default function AdminPanel() {
         <section className="panel"><h2>Control comercial</h2><p className="note">Los pedidos quedan como clientes potenciales al presionar “Enviar pedido”. El código de seguimiento se genera al confirmar anticipo o pago total.</p></section>
       </>}
 
+      {tab === 'multimedia' && (
+  <section className="panel">
+    <h2>Gestor Multimedia</h2>
+
+    <MediaLibrary
+      imagenes={imagenes}
+      onAdd={crearImagen}
+      onRemove={eliminarImagen}
+      onSelect={(img) => console.log('Imagen seleccionada', img)}
+    />
+  </section>
+)}
       {tab === 'identidad' && <section className="panel">
         <h2><Settings size={20} /> Identidad del sitio</h2>
         <div className="form-grid">
           <label>Nombre del sitio<input value={configuracion.nombreSitio} onChange={(e) => guardarConfig('nombreSitio', e.target.value)} /></label>
-          <label>Logo texto<input value={configuracion.logoTexto} onChange={(e) => guardarConfig('logoTexto', e.target.value)} /></label>
-          <label>Slogan<input value={configuracion.slogan} onChange={(e) => guardarConfig('slogan', e.target.value)} /></label>
+<div className="span-2">
+  <ImageUploader
+    label="Logo principal del sitio"
+    value={configuracion.logo}
+    onChange={(img) => guardarConfig('logo', img)}
+  />
+</div>
+npm run build          <label>Slogan<input value={configuracion.slogan} onChange={(e) => guardarConfig('slogan', e.target.value)} /></label>
           <label>WhatsApp<input value={configuracion.whatsapp} onChange={(e) => guardarConfig('whatsapp', e.target.value)} /></label>
           <label>Correo<input value={configuracion.correo} onChange={(e) => guardarConfig('correo', e.target.value)} /></label>
           <label>Instagram<input value={configuracion.instagram} onChange={(e) => guardarConfig('instagram', e.target.value)} /></label>
@@ -120,8 +139,141 @@ export default function AdminPanel() {
           <input className="span-2" placeholder="Descripción" value={nuevoProducto.descripcion} onChange={(e) => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} />
           <button><Plus size={18} /> Nuevo producto</button>
         </form>
-        <div className="admin-list">{productos.map((p) => <article key={p.id} className="admin-row"><img src={p.imagen} alt={p.nombre} /><div><b>{p.nombre}</b><span>{p.categoria} · {p.medidas}</span></div><strong>{formatoC$(p.precio)}</strong><button className="btn-outline" onClick={() => actualizarProducto({ ...p, activo: !p.activo })}>{p.activo === false ? 'Activar' : 'Ocultar'}</button></article>)}</div>
-      </section>}
+<div className="admin-list">
+  {productos.map((p) => (
+    <article key={p.id} className="admin-row">
+      <img src={p.imagen} alt={p.nombre} />
+
+      <div>
+        <b>{p.nombre}</b>
+        <span>{p.categoria} · {p.medidas}</span>
+      </div>
+
+      <strong>{formatoC$(p.precio)}</strong>
+
+      <button
+        className="btn-outline"
+        type="button"
+        onClick={() => setProductoEditando(p)}
+      >
+        Editar
+      </button>
+
+      <button
+        className="btn-outline"
+        type="button"
+        onClick={() => actualizarProducto({ ...p, activo: !p.activo })}
+      >
+        {p.activo === false ? 'Activar' : 'Ocultar'}
+      </button>
+
+      {productoEditando?.id === p.id && (
+        <div className="edit-box span-2">
+          <h3>Editar producto</h3>
+
+          <ImageUploader
+            label="Reemplazar imagen"
+            value={productoEditando.imagen}
+            onChange={(img) =>
+              setProductoEditando({
+                ...productoEditando,
+                imagen: img,
+              })
+            }
+          />
+
+          <input
+            placeholder="Nombre"
+            value={productoEditando.nombre}
+            onChange={(e) =>
+              setProductoEditando({
+                ...productoEditando,
+                nombre: e.target.value,
+              })
+            }
+          />
+
+          <input
+            placeholder="Categoría"
+            value={productoEditando.categoria}
+            onChange={(e) =>
+              setProductoEditando({
+                ...productoEditando,
+                categoria: e.target.value,
+              })
+            }
+          />
+
+          <input
+            placeholder="Medidas"
+            value={productoEditando.medidas}
+            onChange={(e) =>
+              setProductoEditando({
+                ...productoEditando,
+                medidas: e.target.value,
+              })
+            }
+          />
+
+          <input
+            type="number"
+            placeholder="Precio"
+            value={productoEditando.precio}
+            onChange={(e) =>
+              setProductoEditando({
+                ...productoEditando,
+                precio: Number(e.target.value),
+              })
+            }
+          />
+
+          <textarea
+            placeholder="Descripción"
+            value={productoEditando.descripcion}
+            onChange={(e) =>
+              setProductoEditando({
+                ...productoEditando,
+                descripcion: e.target.value,
+              })
+            }
+          />
+
+          <input
+            placeholder="Etiqueta"
+            value={productoEditando.etiqueta || ''}
+            onChange={(e) =>
+              setProductoEditando({
+                ...productoEditando,
+                etiqueta: e.target.value,
+              })
+            }
+          />
+
+          <div className="edit-actions">
+            <button
+              type="button"
+              onClick={() => {
+                actualizarProducto(productoEditando);
+                setProductoEditando(null);
+              }}
+            >
+              Guardar cambios
+            </button>
+
+            <button
+              className="btn-outline"
+              type="button"
+              onClick={() => setProductoEditando(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  ))}
+</div> 
+     </section>}
 
       {tab === 'banners' && <section className="panel">
         <h2><Megaphone size={20} /> Banners</h2>
@@ -129,7 +281,18 @@ export default function AdminPanel() {
         <form className="form-grid" onSubmit={agregarBanner}>
           <input placeholder="Título" value={nuevoBanner.titulo} onChange={(e) => setNuevoBanner({ ...nuevoBanner, titulo: e.target.value })} />
           <input placeholder="Subtítulo" value={nuevoBanner.subtitulo} onChange={(e) => setNuevoBanner({ ...nuevoBanner, subtitulo: e.target.value })} />
-          <input placeholder="Imagen /productos/foto.jpg" value={nuevoBanner.imagen} onChange={(e) => setNuevoBanner({ ...nuevoBanner, imagen: e.target.value })} />
+          <div className="span-2">
+  <ImageUploader
+    label="Imagen del banner"
+    value={nuevoBanner.imagen}
+    onChange={(img) =>
+      setNuevoBanner({
+        ...nuevoBanner,
+        imagen: img,
+      })
+    }
+  />
+</div>
           <select value={nuevoBanner.ubicacion} onChange={(e) => setNuevoBanner({ ...nuevoBanner, ubicacion: e.target.value })}><option value="slider-home">Slider principal</option><option value="home">Promociones destacadas</option><option value="catalogo">Catálogo</option></select>
           <select value={nuevoBanner.link} onChange={(e) => setNuevoBanner({ ...nuevoBanner, link: e.target.value })}><option value="catalogo">Catálogo</option><option value="contacto">Contacto</option><option value="home">Inicio</option></select>
           <button><ImagePlus size={18} /> Crear banner</button>
@@ -142,7 +305,18 @@ export default function AdminPanel() {
         <form className="form-grid" onSubmit={(e) => { e.preventDefault(); if (!nuevoTrabajo.titulo) return; crearTrabajo(nuevoTrabajo); setNuevoTrabajo({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' }); }}>
           <input placeholder="Título del trabajo" value={nuevoTrabajo.titulo} onChange={(e) => setNuevoTrabajo({ ...nuevoTrabajo, titulo: e.target.value })} />
           <select value={nuevoTrabajo.tipo} onChange={(e) => setNuevoTrabajo({ ...nuevoTrabajo, tipo: e.target.value })}><option>Foto</option><option>Video</option></select>
-          <input className="span-2" placeholder="URL imagen o video" value={nuevoTrabajo.imagen} onChange={(e) => setNuevoTrabajo({ ...nuevoTrabajo, imagen: e.target.value })} />
+<div className="span-2">
+  <ImageUploader
+    label="Foto del trabajo realizado"
+    value={nuevoTrabajo.imagen}
+    onChange={(img) =>
+      setNuevoTrabajo({
+        ...nuevoTrabajo,
+        imagen: img,
+      })
+    }
+  />
+</div>
           <input className="span-2" placeholder="Descripción" value={nuevoTrabajo.descripcion} onChange={(e) => setNuevoTrabajo({ ...nuevoTrabajo, descripcion: e.target.value })} />
           <button><Plus size={18} /> Publicar trabajo</button>
         </form>

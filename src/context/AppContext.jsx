@@ -1,4 +1,3 @@
-import MediaLibrary from '../components/MediaLibrary';
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { productosIniciales, veterinariaDemo } from '../data/productos';
 import { resumenCarrito } from '../lib/calculos';
@@ -40,8 +39,37 @@ const trabajosIniciales = [
 ];
 
 const veterinariasIniciales = [
-  veterinariaDemo,
-  { id: 'vet002', codigo: 'VET002', nombre: 'Veterinaria Animal Care', telefono: '+505 7777 7777', direccion: 'Managua, Nicaragua', responsable: 'Responsable Animal Care', comisionPorcentaje: 10, activa: true, escaneos: 0, pedidos: 0, ventas: 0, comision: 0 },
+  {
+    ...veterinariaDemo,
+    id: 'vet001',
+    slug: 'veterinaria-demo',
+    telefono: '',
+    direccion: 'Managua, Nicaragua',
+    responsable: 'Responsable Demo',
+    comisionPorcentaje: 10,
+    linkAfiliado: '/?vet=veterinaria-demo',
+    activa: true,
+    escaneos: 0,
+    pedidos: 0,
+    ventas: 0,
+    comision: 0,
+  },
+  {
+    id: 'vet002',
+    codigo: 'VET002',
+    nombre: 'Veterinaria Animal Care',
+    slug: 'animal-care',
+    telefono: '+505 7777 7777',
+    direccion: 'Managua, Nicaragua',
+    responsable: 'Responsable Animal Care',
+    comisionPorcentaje: 10,
+    linkAfiliado: '/?vet=animal-care',
+    activa: true,
+    escaneos: 0,
+    pedidos: 0,
+    ventas: 0,
+    comision: 0,
+  },
 ];
 
 export const estadosProduccion = [
@@ -95,6 +123,52 @@ const eliminarImagen = (id) => {
   setImagenes((prev) => prev.filter((img) => img.id !== id));
 };
   const [veterinarias, setVeterinarias] = useState(veterinariasIniciales);
+  const crearSlug = (texto) =>
+  String(texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+const crearVeterinaria = (datos) => {
+  const slug = crearSlug(datos.nombre);
+  const codigo = datos.codigo || `VET${String(veterinarias.length + 1).padStart(3, '0')}`;
+
+  const nueva = {
+    id: `vet${Date.now()}`,
+    codigo,
+    nombre: datos.nombre,
+    slug,
+    telefono: datos.telefono || '',
+    direccion: datos.direccion || '',
+    responsable: datos.responsable || '',
+    comisionPorcentaje: Number(datos.comisionPorcentaje || 10),
+    linkAfiliado: `/?vet=${slug}`,
+    activa: true,
+    escaneos: 0,
+    pedidos: 0,
+    ventas: 0,
+    comision: 0,
+  };
+
+  setVeterinarias((prev) => [nueva, ...prev]);
+};
+
+const actualizarVeterinaria = (veterinaria) => {
+  setVeterinarias((prev) =>
+    prev.map((v) =>
+      v.id === veterinaria.id
+        ? {
+            ...v,
+            ...veterinaria,
+            slug: veterinaria.slug || crearSlug(veterinaria.nombre),
+            linkAfiliado: `/?vet=${veterinaria.slug || crearSlug(veterinaria.nombre)}`,
+          }
+        : v
+    )
+  );
+};
   const [veterinaria, setVeterinaria] = useState(veterinariaDemo);
   const [carrito, setCarrito] = useState([]);
   const [pedidos, setPedidos] = useState([]);
@@ -230,6 +304,7 @@ const logout = () => {
   const actualizarCuentaBancaria = (cuenta) => setCuentasBancarias((prev) => prev.map((c) => c.id === cuenta.id ? { ...c, ...cuenta } : c));
 
   return <AppContext.Provider value={{ configuracion, setConfiguracion, cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria, banners, crearBanner, actualizarBanner, trabajos, crearTrabajo, actualizarTrabajo, productos, setProductos, actualizarProducto,imagenes,
-crearImagen, eliminarImagen, crearProducto, veterinarias, setVeterinarias, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
+crearImagen, eliminarImagen, crearProducto, veterinarias, setVeterinarias, crearVeterinaria,
+actualizarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
 }
 export const useApp = () => useContext(AppContext);

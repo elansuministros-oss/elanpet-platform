@@ -113,5 +113,17 @@ export const categoriasHome = [
 export const veterinariaDemo = {
   codigo: 'VET001',
   nombre: 'Veterinaria Demo',
+  slug: 'veterinaria-demo',
+
+  whatsapp: '',
+  correo: '',
+
   comision_porcentaje: 10,
+
+  linkAfiliado:
+    'https://elanpet.vercel.app/?vet=veterinaria-demo',
+
+  qr: '',
+
+  activa: true,
 };

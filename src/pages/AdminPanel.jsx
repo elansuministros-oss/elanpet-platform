@@ -1,3 +1,4 @@
+import { QRCodeCanvas } from 'qrcode.react';
 import MediaLibrary from '../components/MediaLibrary';
 import React, { useState } from 'react';
 import { CreditCard, ImagePlus, Megaphone, Plus, Save, Settings, Store } from 'lucide-react';
@@ -8,7 +9,7 @@ import ImageUploader from '../components/ImageUploader';
 export default function AdminPanel() {
   const {imagenes, crearImagen, eliminarImagen,
     productos, crearProducto, actualizarProducto,
-    veterinarias,
+    veterinarias, 
     banners, crearBanner, actualizarBanner,
     trabajos, crearTrabajo, actualizarTrabajo,
     configuracion, setConfiguracion,
@@ -347,10 +348,68 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
         {pedidos.filter(p => p.codigoSeguimiento).length === 0 ? <p>No hay pedidos con seguimiento activo.</p> : <div className="admin-list">{pedidos.filter(p => p.codigoSeguimiento).map((p) => <article key={p.id} className="admin-row no-image"><div><b>{p.codigoSeguimiento} · {p.cliente?.nombre}</b><span>{p.items?.map(i => i.nombre).join(', ')}</span><span>Estado actual: {etiquetasEstado[p.estadoProduccion]}</span></div><strong>{formatoC$(p.saldoPendiente || 0)} saldo</strong><select value={p.estadoProduccion} onChange={(e) => cambiarEstadoProduccion(p, e.target.value)}>{estadosProduccion.map(e => <option value={e} key={e}>{etiquetasEstado[e]}</option>)}</select>{p.comisionEstado === 'pendiente' && <button className="btn-outline" onClick={() => marcarComisionPagada(p)}>Comisión pagada</button>}</article>)}</div>}
       </section>}
 
-      {tab === 'veterinarias' && <section className="panel">
-        <h2>Veterinarias</h2>
-        <table><thead><tr><th>Código</th><th>Nombre</th><th>Ventas entregadas</th><th>Comisión</th><th>Estado</th></tr></thead><tbody>{veterinarias.map(v => <tr key={v.id}><td>{v.codigo}</td><td>{v.nombre}</td><td>{formatoC$(pedidos.filter(p => p.veterinaria?.id === v.id && p.estado === 'entregado').reduce((a,p)=>a+(p.resumen?.total||0),0))}</td><td>{v.comisionPorcentaje || 10}%</td><td>{v.activa ? 'Activa' : 'Inactiva'}</td></tr>)}</tbody></table>
-      </section>}
+      {tab === 'veterinarias' && (
+  <section className="panel">
+    <h2>Veterinarias afiliadas</h2>
+
+    <p className="note">
+      Cada veterinaria tiene un enlace único y un QR para referir clientes.
+    </p>
+
+    <div className="admin-list">
+      {veterinarias.map((v) => {
+        const ventasEntregadas = pedidos
+          .filter(
+            (p) =>
+              p.veterinaria?.id === v.id &&
+              p.estado === 'entregado'
+          )
+          .reduce((a, p) => a + (p.resumen?.total || 0), 0);
+
+        const linkBase =
+          typeof window !== 'undefined'
+            ? window.location.origin
+            : '';
+
+        const linkAfiliado =
+          v.linkAfiliado?.startsWith('http')
+            ? v.linkAfiliado
+            : `${linkBase}${v.linkAfiliado || `/?vet=${v.slug || v.codigo}`}`;
+
+        return (
+          <article key={v.id} className="admin-row no-image vet-card">
+            <div>
+              <b>{v.nombre}</b>
+              <span>{v.codigo} · Comisión {v.comisionPorcentaje || 10}%</span>
+              <span>{v.activa ? 'Activa' : 'Inactiva'}</span>
+              <span>Ventas entregadas: {formatoC$(ventasEntregadas)}</span>
+            </div>
+
+            <div className="qr-box">
+              <QRCodeCanvas
+                id={`qr-${v.id}`}
+                value={linkAfiliado}
+                size={120}
+                includeMargin
+              />
+
+              <small>{linkAfiliado}</small>
+
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => navigator.clipboard.writeText(linkAfiliado)}
+              >
+                Copiar enlace
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  </section>
+)}
     </main>
   );
 }
+

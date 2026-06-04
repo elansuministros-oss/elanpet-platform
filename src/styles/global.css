@@ -830,3 +830,58 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
     display: none !important;
   }
 }
+/* ==========================
+   ELANPET CATALOG MOBILE V1
+========================== */
+
+@media (max-width: 768px) {
+
+  .products-grid,
+  .catalog-grid,
+  .grid-products,
+  .productos-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+    padding: 14px !important;
+  }
+
+  .product-card,
+  .producto-card,
+  .card-product {
+    width: 100% !important;
+    border-radius: 18px !important;
+    overflow: hidden;
+  }
+
+  .product-card img,
+  .producto-card img,
+  .card-product img {
+    width: 100% !important;
+    height: 220px !important;
+    object-fit: cover !important;
+  }
+
+  .product-card h3,
+  .producto-card h3,
+  .card-product h3 {
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+  }
+
+  .product-card p,
+  .producto-card p,
+  .card-product p {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+
+  .product-card button,
+  .producto-card button,
+  .card-product button {
+    width: 100% !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+    border-radius: 12px !important;
+  }
+}

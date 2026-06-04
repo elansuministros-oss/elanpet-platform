@@ -389,7 +389,7 @@ const actualizarUsuario = (usuarioActualizado) => {
 
   return <AppContext.Provider value={{ configuracion, setConfiguracion, cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria, banners, crearBanner, actualizarBanner, trabajos, crearTrabajo, actualizarTrabajo, productos, setProductos, actualizarProducto,imagenes,
 crearImagen, eliminarImagen, crearProducto, veterinarias, setVeterinarias, crearVeterinaria,
-actualizarVeterinaria, eliminarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logoutusuarios,
+actualizarVeterinaria, eliminarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout, usuarios,
 crearUsuario, actualizarUsuario }}>{children}</AppContext.Provider>;
 }
 export const useApp = () => useContext(AppContext);

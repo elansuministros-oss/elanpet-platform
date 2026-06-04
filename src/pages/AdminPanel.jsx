@@ -507,6 +507,14 @@ const agregarVeterinaria = (e) => {
   Pedidos: {pedidosVeterinaria.length} · Ventas: {formatoC$(ventasEntregadas)} · Comisión: {formatoC$(comisionVeterinaria)}
 </span>
 
+const pedidosVeterinaria = pedidos.filter(
+  (p) => p.veterinaria?.id === v.id
+);
+
+const ventasEntregadas = pedidosVeterinaria
+  .filter((p) => p.estado === 'entregado')
+  .reduce((a, p) => a + (p.resumen?.total || 0), 0);
+  
 const comisionVeterinaria = pedidosVeterinaria
   .filter((p) => p.estado === 'entregado')
   .reduce((a, p) => a + (p.resumen?.comision || 0), 0);

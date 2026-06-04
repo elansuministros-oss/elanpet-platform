@@ -35,6 +35,7 @@ const [productoEditando, setProductoEditando] = useState(null);
   activa: true,
 });
 const [busquedaVeterinaria, setBusquedaVeterinaria] = useState('');
+const [veterinariaEditando, setVeterinariaEditando] = useState(null);
 
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
 const tabs = [
@@ -74,10 +75,21 @@ const agregarVeterinaria = (e) => {
 
   if (!nuevaVeterinaria.nombre) return;
 
-  crearVeterinaria({
+  const datosVeterinaria = {
     ...nuevaVeterinaria,
     comisionPorcentaje: Number(nuevaVeterinaria.comisionPorcentaje) || 10,
-  });
+  };
+
+  if (veterinariaEditando) {
+    actualizarVeterinaria({
+      ...veterinariaEditando,
+      ...datosVeterinaria,
+    });
+
+    setVeterinariaEditando(null);
+  } else {
+    crearVeterinaria(datosVeterinaria);
+  }
 
   setNuevaVeterinaria({
     nombre: '',
@@ -90,6 +102,7 @@ const agregarVeterinaria = (e) => {
     activa: true,
   });
 };
+  
   const marcarComisionPagada = (pedido) => actualizarPedido({ ...pedido, comisionEstado: 'pagada' });
 
   function mensajeSeguimiento(pedido, codigo) {
@@ -148,7 +161,7 @@ const agregarVeterinaria = (e) => {
     onChange={(img) => guardarConfig('logo', img)}
   />
 </div>
-npm run build          <label>Slogan<input value={configuracion.slogan} onChange={(e) => guardarConfig('slogan', e.target.value)} /></label>
+<label>Slogan<input value={configuracion.slogan} onChange={(e) => guardarConfig('slogan', e.target.value)} /></label>
           <label>WhatsApp<input value={configuracion.whatsapp} onChange={(e) => guardarConfig('whatsapp', e.target.value)} /></label>
           <label>Correo<input value={configuracion.correo} onChange={(e) => guardarConfig('correo', e.target.value)} /></label>
           <label>Instagram<input value={configuracion.instagram} onChange={(e) => guardarConfig('instagram', e.target.value)} /></label>
@@ -466,8 +479,9 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
   </div>
 
   <button type="submit">
-    Nueva veterinaria
-  </button>
+  {veterinariaEditando ? 'Guardar cambios' : 'Nueva veterinaria'}
+</button>
+
 </form>
 
     <p className="note">
@@ -566,6 +580,27 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
               >
                 Copiar enlace
               </button>
+              <button
+  type="button"
+  className="btn-outline"
+  onClick={() => {
+    setVeterinariaEditando(v);
+
+    setNuevaVeterinaria({
+      nombre: v.nombre || '',
+      responsable: v.responsable || '',
+      whatsapp: v.whatsapp || '',
+      email: v.email || '',
+      direccion: v.direccion || '',
+      comisionPorcentaje: v.comisionPorcentaje || 10,
+      logo: v.logo || '',
+      activa: v.activa,
+    });
+  }}
+>
+  Editar
+</button>
+
               <button
   type="button"
   className="btn-outline"

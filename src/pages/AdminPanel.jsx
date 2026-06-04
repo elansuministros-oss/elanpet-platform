@@ -24,25 +24,7 @@ const [productoEditando, setProductoEditando] = useState(null);
   const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'slider-home', link: 'catalogo', imagen: '', activo: true });
   const [nuevoTrabajo, setNuevoTrabajo] = useState({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' });
   const [nuevaCuenta, setNuevaCuenta] = useState({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
-const nueva = {
-  id: `vet${Date.now()}`,
-  codigo,
-  nombre: datos.nombre,
-  slug,
-  telefono: datos.telefono || datos.whatsapp || '',
-  whatsapp: datos.whatsapp || datos.telefono || '',
-  email: datos.email || datos.correo || '',
-  direccion: datos.direccion || '',
-  responsable: datos.responsable || '',
-  logo: datos.logo || '',
-  comisionPorcentaje: Number(datos.comisionPorcentaje || 10),
-  linkAfiliado: `/?vet=${slug}`,
-  activa: true,
-  escaneos: 0,
-  pedidos: 0,
-  ventas: 0,
-  comision: 0,
-};
+
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
 const tabs = [
   'dashboard',

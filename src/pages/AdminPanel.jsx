@@ -25,7 +25,18 @@ const [productoEditando, setProductoEditando] = useState(null);
   const [nuevaCuenta, setNuevaCuenta] = useState({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
 
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
-const tabs = ['dashboard', 'productos', 'banners', 'trabajos', 'multimedia', 'identidad', 'cuentas', 'pedidos'];
+const tabs = [
+  'dashboard',
+  'productos',
+  'banners',
+  'trabajos',
+  'multimedia',
+  'identidad',
+  'cuentas',
+  'pedidos',
+  'produccion',
+  'veterinarias',
+];
   const agregarProducto = (e) => {
     e.preventDefault();
     if (!nuevoProducto.nombre || !nuevoProducto.precio) return;

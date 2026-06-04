@@ -209,3 +209,102 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
   gap: 10px;
   flex-wrap: wrap;
 }
+/* =========================================
+   ELANPET MOBILE UX V1
+========================================= */
+
+@media (max-width: 768px) {
+
+  /* HEADER */
+
+  .header {
+    padding: 12px;
+  }
+
+  .header-items {
+    display: none;
+  }
+
+  /* TABS ADMIN */
+
+  .tabs,
+  .admin-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 10px;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar,
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs button,
+  .admin-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* FORMULARIOS */
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .span-2 {
+    grid-column: auto !important;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    width: 100%;
+  }
+
+  /* PRODUCTOS */
+
+  .product-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .product-card {
+    width: 100%;
+  }
+
+  .product-card img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+
+  /* DASHBOARD */
+
+  .stats-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* CUENTAS */
+
+  .payment-options,
+  .payment-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* TABLAS */
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* BOTONES */
+
+  button {
+    min-height: 48px;
+  }
+}

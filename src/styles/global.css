@@ -308,3 +308,43 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
     min-height: 48px;
   }
 }
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: #102033;
+    color: #ffffff;
+    font-weight: 800;
+  }
+
+  .header nav {
+    display: none;
+  }
+
+  .header nav.nav-open {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    z-index: 999;
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 22px;
+    background: #0f172a;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .header nav.nav-open button {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+}

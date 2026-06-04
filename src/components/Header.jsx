@@ -9,7 +9,14 @@ export default function Header({ page, setPage }) {
   return (
     <header className="header">
       <div className="brand" onClick={() => go('home')}><span className="brand-mark"><PawPrint size={20} /></span><strong>{configuracion.logoTexto || 'ELANPET.COM'}</strong></div>
-      <button className="menu-toggle" onClick={() => setOpen(!open)} aria-label="Abrir menú">{open ? <X size={22} /> : <Menu size={22} />}</button>
+<button
+  className="menu-toggle"
+  onClick={() => setOpen(!open)}
+  aria-label="Abrir menú"
+>
+  {open ? <X size={24} /> : <Menu size={24} />}
+  <span>{open ? 'Cerrar' : 'Menú'}</span>
+</button>
       <nav className={open ? 'nav-open' : ''}>
         <button className={page === 'home' ? 'nav-active' : ''} onClick={() => go('home')}>Inicio</button>
         <button className={page === 'catalogo' ? 'nav-active' : ''} onClick={() => go('catalogo')}>Catálogo</button>

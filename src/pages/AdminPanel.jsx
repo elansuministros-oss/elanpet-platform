@@ -503,18 +503,18 @@ const agregarVeterinaria = (e) => {
     );
   })
   .map((v) => {
-  
-const pedidosVeterinaria = pedidos.filter(
-  (p) => p.veterinaria?.id === v.id
-);
+  const pedidosVeterinaria = pedidos.filter(
+    (p) => p.veterinaria?.id === v.id
+  );
 
-<span>
-  Pedidos: {pedidosVeterinaria.length} · Ventas: {formatoC$(ventasEntregadas)} · Comisión: {formatoC$(comisionVeterinaria)}
-</span>
+  const ventasEntregadas = pedidosVeterinaria
+    .filter((p) => p.estado === 'entregado')
+    .reduce((a, p) => a + (p.resumen?.total || 0), 0);
 
-const comisionVeterinaria = pedidosVeterinaria
-  .filter((p) => p.estado === 'entregado')
-  .reduce((a, p) => a + (p.resumen?.comision || 0), 0);
+  const comisionVeterinaria = pedidosVeterinaria
+    .filter((p) => p.estado === 'entregado')
+    .reduce((a, p) => a + (p.resumen?.comision || 0), 0);
+
 
         const linkBase =
           typeof window !== 'undefined'
@@ -564,10 +564,10 @@ const comisionVeterinaria = pedidosVeterinaria
   )}
 
   <span>
-    Ventas entregadas: {formatoC$(ventasEntregadas)}
-  </span>
-</div>
+  Pedidos: {pedidosVeterinaria.length} · Ventas: {formatoC$(ventasEntregadas)} · Comisión: {formatoC$(comisionVeterinaria)}
+</span>
 
+</div>
             <div className="qr-box">
               <QRCodeCanvas
                 id={`qr-${v.id}`}

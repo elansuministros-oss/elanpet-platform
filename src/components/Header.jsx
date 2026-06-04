@@ -1,12 +1,14 @@
-import React from 'react';
-import { PawPrint, ShoppingCart } from 'lucide-react';
+import React, { useState } from 'react';
+import { PawPrint, ShoppingCart, Menu, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Header({ page, setPage }) {
   const { resumen, usuario, logout, configuracion } = useApp();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const go = (p) => {
     setPage(p);
+    setMenuOpen(false);
   };
 
   const salir = () => {
@@ -15,45 +17,102 @@ export default function Header({ page, setPage }) {
   };
 
   return (
-    <header className="desktop-header">
-      <div className="brand" onClick={() => go('home')}>
-        <span className="brand-mark">
-          <PawPrint size={20} />
-        </span>
-        <strong>{configuracion.logoTexto || 'ELANPET.COM'}</strong>
-      </div>
+    <>
+      {/* DESKTOP */}
+      <header className="desktop-header">
+        <div className="brand" onClick={() => go('home')}>
+          <span className="brand-mark">
+            <PawPrint size={20} />
+          </span>
+          <strong>{configuracion.logoTexto || 'ELANPET.COM'}</strong>
+        </div>
 
-      <nav className="desktop-nav">
-        <button className={page === 'home' ? 'nav-active' : ''} onClick={() => go('home')}>Inicio</button>
-        <button className={page === 'catalogo' ? 'nav-active' : ''} onClick={() => go('catalogo')}>Catálogo</button>
-        <button className={page === 'trabajos' ? 'nav-active' : ''} onClick={() => go('trabajos')}>Trabajos</button>
-        <button className={page === 'seguimiento' ? 'nav-active' : ''} onClick={() => go('seguimiento')}>Seguimiento</button>
-        <button className={page === 'contacto' ? 'nav-active' : ''} onClick={() => go('contacto')}>Contacto</button>
+        <nav className="desktop-nav">
+          <button onClick={() => go('home')}>Inicio</button>
+          <button onClick={() => go('catalogo')}>Catálogo</button>
+          <button onClick={() => go('trabajos')}>Trabajos</button>
+          <button onClick={() => go('seguimiento')}>Seguimiento</button>
+          <button onClick={() => go('contacto')}>Contacto</button>
 
-        {usuario?.rol === 'admin' && (
-          <button className={page === 'admin' ? 'nav-active' : ''} onClick={() => go('admin')}>
-            Panel Admin
+          {usuario?.rol === 'admin' && (
+            <button onClick={() => go('admin')}>Admin</button>
+          )}
+
+          {usuario?.rol === 'veterinaria' && (
+            <button onClick={() => go('vet')}>Mi Panel</button>
+          )}
+
+          {usuario ? (
+            <button onClick={salir}>Salir</button>
+          ) : (
+            <button onClick={() => go('login')}>Portal</button>
+          )}
+
+          <button className="cart" onClick={() => go('carrito')}>
+            <ShoppingCart size={18} />
+            <span>{resumen?.cantidad || 0}</span>
           </button>
-        )}
+        </nav>
+      </header>
 
-        {usuario?.rol === 'veterinaria' && (
-          <button className={page === 'vet' ? 'nav-active' : ''} onClick={() => go('vet')}>
-            Mi Panel
-          </button>
-        )}
+      {/* MOBILE */}
+      <header className="mobile-header">
+        <div className="mobile-topbar">
+          <div className="brand" onClick={() => go('home')}>
+            <span className="brand-mark">
+              <PawPrint size={18} />
+            </span>
+            <strong>{configuracion.logoTexto || 'ELANPET.COM'}</strong>
+          </div>
 
-        {usuario ? (
-          <button onClick={salir}>Salir</button>
-        ) : (
-          <button className={page === 'login' ? 'nav-active' : ''} onClick={() => go('login')}>
-            Portal
-          </button>
-        )}
+          <div className="mobile-right">
+            <button
+              className="mobile-cart"
+              onClick={() => go('carrito')}
+            >
+              <ShoppingCart size={18} />
+              <span>{resumen?.cantidad || 0}</span>
+            </button>
 
-        <button className="cart" onClick={() => go('carrito')}>
-          <ShoppingCart size={18} /> {resumen.cantidad}
-        </button>
-      </nav>
-    </header>
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
+        </div>
+
+        {menuOpen && (
+          <nav className="mobile-nav">
+            <button onClick={() => go('home')}>Inicio</button>
+            <button onClick={() => go('catalogo')}>Catálogo</button>
+            <button onClick={() => go('trabajos')}>Trabajos</button>
+            <button onClick={() => go('seguimiento')}>Seguimiento</button>
+            <button onClick={() => go('contacto')}>Contacto</button>
+
+            {usuario?.rol === 'admin' && (
+              <button onClick={() => go('admin')}>
+                Panel Admin
+              </button>
+            )}
+
+            {usuario?.rol === 'veterinaria' && (
+              <button onClick={() => go('vet')}>
+                Mi Panel
+              </button>
+            )}
+
+            {usuario ? (
+              <button onClick={salir}>Salir</button>
+            ) : (
+              <button onClick={() => go('login')}>
+                Portal
+              </button>
+            )}
+          </nav>
+        )}
+      </header>
+    </>
   );
 }

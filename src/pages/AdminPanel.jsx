@@ -24,6 +24,16 @@ const [productoEditando, setProductoEditando] = useState(null);
   const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'slider-home', link: 'catalogo', imagen: '', activo: true });
   const [nuevoTrabajo, setNuevoTrabajo] = useState({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' });
   const [nuevaCuenta, setNuevaCuenta] = useState({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
+  const [nuevaVeterinaria, setNuevaVeterinaria] = useState({
+  nombre: '',
+  responsable: '',
+  whatsapp: '',
+  email: '',
+  direccion: '',
+  comisionPorcentaje: 10,
+  logo: '',
+  activa: true,
+});
 
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
 const tabs = [

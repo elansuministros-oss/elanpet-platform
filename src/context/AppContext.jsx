@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { productosIniciales, veterinariaDemo } from '../data/productos';
 import { resumenCarrito } from '../lib/calculos';
 
@@ -122,7 +122,18 @@ const crearImagen = (imagen) => {
 const eliminarImagen = (id) => {
   setImagenes((prev) => prev.filter((img) => img.id !== id));
 };
-  const [veterinarias, setVeterinarias] = useState(veterinariasIniciales);
+ const [veterinarias, setVeterinarias] = useState(() => {
+  try {
+    const guardadas = localStorage.getItem('elanpet_veterinarias');
+    return guardadas ? JSON.parse(guardadas) : veterinariasIniciales;
+  } catch {
+    return veterinariasIniciales;
+  }
+});
+useEffect(() => {
+  localStorage.setItem('elanpet_veterinarias', JSON.stringify(veterinarias));
+}, [veterinarias]);
+
   const crearSlug = (texto) =>
   String(texto || '')
     .toLowerCase()
@@ -140,9 +151,12 @@ const crearVeterinaria = (datos) => {
     codigo,
     nombre: datos.nombre,
     slug,
-    telefono: datos.telefono || '',
-    direccion: datos.direccion || '',
-    responsable: datos.responsable || '',
+    telefono: datos.telefono || datos.whatsapp || '',
+whatsapp: datos.whatsapp || datos.telefono || '',
+email: datos.email || datos.correo || '',
+direccion: datos.direccion || '',
+responsable: datos.responsable || '',
+logo: datos.logo || '',
     comisionPorcentaje: Number(datos.comisionPorcentaje || 10),
     linkAfiliado: `/?vet=${slug}`,
     activa: true,

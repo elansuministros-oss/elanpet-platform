@@ -467,4 +467,152 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
   .desktop-header {
     display: flex !important;
   }
+}/* =========================================
+   ELANPET HEADER RESPONSIVE V2
+========================================= */
+
+.desktop-header {
+  display: flex;
+}
+
+.mobile-header {
+  display: none;
+}
+
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    display: none !important;
+  }
+
+  .desktop-header {
+    display: none !important;
+  }
+
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: block;
+    padding: 10px 12px;
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .mobile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mobile-header .brand {
+    color: #ffffff;
+    min-width: 0;
+  }
+
+  .mobile-header .brand strong {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-cart,
+  .mobile-menu-button {
+    width: auto;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 14px;
+    color: #ffffff;
+    font-weight: 800;
+  }
+
+  .mobile-cart {
+    background: #fb7c35;
+  }
+
+  .mobile-menu-button {
+    background: #2563eb;
+  }
+
+  .mobile-nav {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 20px;
+    background: #111827;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  }
+
+  .mobile-nav button {
+    width: 100%;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding: 13px 15px;
+    border-radius: 14px;
+    background: #1f2937;
+    color: #ffffff;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .mobile-nav button.nav-active {
+    background: #2563eb;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-header {
+    display: none !important;
+  }
+
+  .desktop-header {
+    display: flex !important;
+  }
+}
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .desktop-header {
+    display: none !important;
+  }
+
+  .mobile-header {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .desktop-nav {
+    display: none !important;
+  }
+
+}
+
+@media (min-width: 769px) {
+
+  .mobile-header {
+    display: none !important;
+  }
+
 }

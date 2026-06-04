@@ -9,7 +9,8 @@ import ImageUploader from '../components/ImageUploader';
 export default function AdminPanel() {
   const {imagenes, crearImagen, eliminarImagen,
     productos, crearProducto, actualizarProducto,
-    veterinarias, 
+    veterinarias, crearVeterinaria, eliminarVeterinaria,
+actualizarVeterinaria, 
     banners, crearBanner, actualizarBanner,
     trabajos, crearTrabajo, actualizarTrabajo,
     configuracion, setConfiguracion,
@@ -23,7 +24,25 @@ const [productoEditando, setProductoEditando] = useState(null);
   const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'slider-home', link: 'catalogo', imagen: '', activo: true });
   const [nuevoTrabajo, setNuevoTrabajo] = useState({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' });
   const [nuevaCuenta, setNuevaCuenta] = useState({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
-
+const nueva = {
+  id: `vet${Date.now()}`,
+  codigo,
+  nombre: datos.nombre,
+  slug,
+  telefono: datos.telefono || datos.whatsapp || '',
+  whatsapp: datos.whatsapp || datos.telefono || '',
+  email: datos.email || datos.correo || '',
+  direccion: datos.direccion || '',
+  responsable: datos.responsable || '',
+  logo: datos.logo || '',
+  comisionPorcentaje: Number(datos.comisionPorcentaje || 10),
+  linkAfiliado: `/?vet=${slug}`,
+  activa: true,
+  escaneos: 0,
+  pedidos: 0,
+  ventas: 0,
+  comision: 0,
+};
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
 const tabs = [
   'dashboard',
@@ -57,7 +76,27 @@ const tabs = [
     crearCuentaBancaria(nuevaCuenta);
     setNuevaCuenta({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
   };
+const agregarVeterinaria = (e) => {
+  e.preventDefault();
 
+  if (!nuevaVeterinaria.nombre) return;
+
+  crearVeterinaria({
+    ...nuevaVeterinaria,
+    comisionPorcentaje: Number(nuevaVeterinaria.comisionPorcentaje) || 10,
+  });
+
+  setNuevaVeterinaria({
+    nombre: '',
+    responsable: '',
+    whatsapp: '',
+    email: '',
+    direccion: '',
+    comisionPorcentaje: 10,
+    logo: '',
+    activa: true,
+  });
+};
   const marcarComisionPagada = (pedido) => actualizarPedido({ ...pedido, comisionEstado: 'pagada' });
 
   function mensajeSeguimiento(pedido, codigo) {
@@ -362,6 +401,74 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
       {tab === 'veterinarias' && (
   <section className="panel">
     <h2>Veterinarias afiliadas</h2>
+    <form className="form-grid" onSubmit={agregarVeterinaria}>
+  <input
+    placeholder="Nombre de la veterinaria"
+    value={nuevaVeterinaria.nombre}
+    onChange={(e) =>
+      setNuevaVeterinaria({ ...nuevaVeterinaria, nombre: e.target.value })
+    }
+  />
+
+  <input
+    placeholder="Responsable"
+    value={nuevaVeterinaria.responsable}
+    onChange={(e) =>
+      setNuevaVeterinaria({ ...nuevaVeterinaria, responsable: e.target.value })
+    }
+  />
+
+  <input
+    placeholder="WhatsApp"
+    value={nuevaVeterinaria.whatsapp}
+    onChange={(e) =>
+      setNuevaVeterinaria({ ...nuevaVeterinaria, whatsapp: e.target.value })
+    }
+  />
+
+  <input
+    placeholder="Correo"
+    value={nuevaVeterinaria.email}
+    onChange={(e) =>
+      setNuevaVeterinaria({ ...nuevaVeterinaria, email: e.target.value })
+    }
+  />
+
+  <input
+    className="span-2"
+    placeholder="Dirección"
+    value={nuevaVeterinaria.direccion}
+    onChange={(e) =>
+      setNuevaVeterinaria({ ...nuevaVeterinaria, direccion: e.target.value })
+    }
+  />
+
+  <input
+    type="number"
+    placeholder="Comisión %"
+    value={nuevaVeterinaria.comisionPorcentaje}
+    onChange={(e) =>
+      setNuevaVeterinaria({
+        ...nuevaVeterinaria,
+        comisionPorcentaje: e.target.value,
+      })
+    }
+  />
+
+  <div className="span-2">
+    <ImageUploader
+      label="Logo de la veterinaria"
+      value={nuevaVeterinaria.logo}
+      onChange={(img) =>
+        setNuevaVeterinaria({ ...nuevaVeterinaria, logo: img })
+      }
+    />
+  </div>
+
+  <button type="submit">
+    Nueva veterinaria
+  </button>
+</form>
 
     <p className="note">
       Cada veterinaria tiene un enlace único y un QR para referir clientes.
@@ -389,12 +496,45 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
 
         return (
           <article key={v.id} className="admin-row no-image vet-card">
-            <div>
-              <b>{v.nombre}</b>
-              <span>{v.codigo} · Comisión {v.comisionPorcentaje || 10}%</span>
-              <span>{v.activa ? 'Activa' : 'Inactiva'}</span>
-              <span>Ventas entregadas: {formatoC$(ventasEntregadas)}</span>
-            </div>
+            <div className="vet-info">
+  {v.logo && (
+    <img
+      src={v.logo}
+      alt={v.nombre}
+      className="vet-logo"
+    />
+  )}
+
+  <b>{v.nombre}</b>
+
+  <span>
+    {v.codigo} · Comisión {v.comisionPorcentaje || 10}%
+  </span>
+
+  <span>
+    Estado: {v.activa ? 'Activa' : 'Inactiva'}
+  </span>
+
+  {v.responsable && (
+    <span>Responsable: {v.responsable}</span>
+  )}
+
+  {v.whatsapp && (
+    <span>WhatsApp: {v.whatsapp}</span>
+  )}
+
+  {v.email && (
+    <span>Correo: {v.email}</span>
+  )}
+
+  {v.direccion && (
+    <span>Dirección: {v.direccion}</span>
+  )}
+
+  <span>
+    Ventas entregadas: {formatoC$(ventasEntregadas)}
+  </span>
+</div>
 
             <div className="qr-box">
               <QRCodeCanvas
@@ -413,6 +553,30 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
               >
                 Copiar enlace
               </button>
+              <button
+  type="button"
+  className="btn-outline"
+  onClick={() =>
+    actualizarVeterinaria({
+      ...v,
+      activa: !v.activa,
+    })
+  }
+>
+  {v.activa ? 'Desactivar' : 'Activar'}
+</button>
+
+              <button
+  type="button"
+  className="btn-outline"
+  onClick={() => {
+    if (window.confirm(`¿Eliminar ${v.nombre}?`)) {
+      eliminarVeterinaria(v.id);
+    }
+  }}
+>
+  Eliminar
+</button>
             </div>
           </article>
         );

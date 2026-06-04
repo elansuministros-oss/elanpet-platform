@@ -169,6 +169,11 @@ const actualizarVeterinaria = (veterinaria) => {
     )
   );
 };
+
+const eliminarVeterinaria = (id) => {
+  setVeterinarias((prev) => prev.filter((v) => v.id !== id));
+};
+
   const [veterinaria, setVeterinaria] = useState(veterinariaDemo);
   const [carrito, setCarrito] = useState([]);
   const [pedidos, setPedidos] = useState([]);
@@ -305,6 +310,6 @@ const logout = () => {
 
   return <AppContext.Provider value={{ configuracion, setConfiguracion, cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria, banners, crearBanner, actualizarBanner, trabajos, crearTrabajo, actualizarTrabajo, productos, setProductos, actualizarProducto,imagenes,
 crearImagen, eliminarImagen, crearProducto, veterinarias, setVeterinarias, crearVeterinaria,
-actualizarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
+actualizarVeterinaria, eliminarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
 }
 export const useApp = () => useContext(AppContext);

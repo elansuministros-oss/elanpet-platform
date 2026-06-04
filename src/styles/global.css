@@ -885,3 +885,17 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
     border-radius: 12px !important;
   }
 }
+.vet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vet-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  margin-bottom: 8px;
+}

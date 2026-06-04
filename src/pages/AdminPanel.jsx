@@ -16,6 +16,7 @@ actualizarVeterinaria,
     configuracion, setConfiguracion,
     cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria,
     pedidos, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion,
+usuarios, crearUsuario, actualizarUsuario,
   } = useApp();
 
   const [tab, setTab] = useState('dashboard');

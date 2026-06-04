@@ -720,3 +720,113 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
     display: none !important;
   }
 }
+/* ==========================
+   ELANPET MOBILE UX FIX
+========================== */
+
+.mobile-header {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .desktop-header,
+  .desktop-nav {
+    display: none !important;
+  }
+
+  .mobile-header {
+    display: block !important;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    background: #1f2128;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .mobile-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobile-header .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #eaf2ff;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-cart,
+  .mobile-menu-btn {
+    border: 0;
+    border-radius: 12px;
+    padding: 9px 11px;
+    background: #ff8845;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mobile-menu-btn {
+    background: #111318;
+  }
+
+  .mobile-nav {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .mobile-nav button {
+    width: 100%;
+    border: 0;
+    border-radius: 12px;
+    padding: 14px;
+    text-align: left;
+    background: #111318;
+    color: #eaf2ff;
+    font-weight: 700;
+  }
+
+  .mobile-nav .nav-active {
+    background: var(--teal, #058B8C);
+    color: white;
+  }
+
+  .products-grid,
+  .catalog-grid,
+  .trabajos-grid,
+  .gallery-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .product-card,
+  .work-card {
+    width: 100% !important;
+  }
+
+  input,
+  textarea,
+  select,
+  .form-row,
+  .contact-grid {
+    width: 100% !important;
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-header {
+    display: none !important;
+  }
+}

@@ -503,13 +503,13 @@ const agregarVeterinaria = (e) => {
     );
   })
   .map((v) => {
-        const ventasEntregadas = pedidos
-          .filter(
-            (p) =>
-              p.veterinaria?.id === v.id &&
-              p.estado === 'entregado'
-          )
-          .reduce((a, p) => a + (p.resumen?.total || 0), 0);
+    <span>
+  Pedidos: {pedidosVeterinaria.length} · Ventas: {formatoC$(ventasEntregadas)} · Comisión: {formatoC$(comisionVeterinaria)}
+</span>
+
+const comisionVeterinaria = pedidosVeterinaria
+  .filter((p) => p.estado === 'entregado')
+  .reduce((a, p) => a + (p.resumen?.comision || 0), 0);
 
         const linkBase =
           typeof window !== 'undefined'

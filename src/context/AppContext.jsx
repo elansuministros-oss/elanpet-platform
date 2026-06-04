@@ -192,6 +192,45 @@ const eliminarVeterinaria = (id) => {
   const [carrito, setCarrito] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [usuario, setUsuario] = useState(null);
+  const [usuarios, setUsuarios] = useState(() => {
+  try {
+    const guardados = localStorage.getItem('elanpet_usuarios');
+    return guardados
+      ? JSON.parse(guardados)
+      : [
+          {
+            id: 'user-admin',
+            nombre: 'Erick Cano',
+            usuario: 'admin',
+            email: 'elansuministros@gmail.com',
+            password: 'ElanPet2026#',
+            rol: 'admin',
+            veterinariaId: '',
+            activo: true,
+            debeCambiarPassword: false,
+            creadoEn: new Date().toISOString(),
+          },
+          {
+            id: 'user-vet-demo',
+            nombre: 'Veterinaria Demo',
+            usuario: 'vetdemo',
+            email: 'vet@elanpet.com',
+            password: 'VetDemo2026#',
+            rol: 'veterinaria',
+            veterinariaId: veterinaria.id,
+            activo: true,
+            debeCambiarPassword: true,
+            creadoEn: new Date().toISOString(),
+          },
+        ];
+  } catch {
+    return [];
+  }
+});
+
+useEffect(() => {
+  localStorage.setItem('elanpet_usuarios', JSON.stringify(usuarios));
+}, [usuarios]);
 
   const agregar = (p) => setCarrito((prev) => {
     const ex = prev.find((i) => i.id === p.id);
@@ -309,6 +348,32 @@ const eliminarVeterinaria = (id) => {
 const logout = () => {
   setUsuario(null);
 };
+const crearUsuario = (datos) => {
+  const nuevo = {
+    id: `user-${Date.now()}`,
+    nombre: datos.nombre || '',
+    usuario: String(datos.usuario || '').toLowerCase().trim(),
+    email: String(datos.email || '').toLowerCase().trim(),
+    password: datos.password || 'Temporal2026#',
+    rol: datos.rol || 'veterinaria',
+    veterinariaId: datos.veterinariaId || '',
+    activo: true,
+    debeCambiarPassword: true,
+    creadoEn: new Date().toISOString(),
+  };
+
+  setUsuarios((prev) => [nuevo, ...prev]);
+};
+
+const actualizarUsuario = (usuarioActualizado) => {
+  setUsuarios((prev) =>
+    prev.map((u) =>
+      u.id === usuarioActualizado.id
+        ? { ...u, ...usuarioActualizado }
+        : u
+    )
+  );
+};
 
   const actualizarProducto = (producto) => setProductos((prev) => prev.map((p) => p.id === producto.id ? { ...p, ...producto } : p));
   const crearProducto = (producto) => {
@@ -324,6 +389,7 @@ const logout = () => {
 
   return <AppContext.Provider value={{ configuracion, setConfiguracion, cuentasBancarias, crearCuentaBancaria, actualizarCuentaBancaria, banners, crearBanner, actualizarBanner, trabajos, crearTrabajo, actualizarTrabajo, productos, setProductos, actualizarProducto,imagenes,
 crearImagen, eliminarImagen, crearProducto, veterinarias, setVeterinarias, crearVeterinaria,
-actualizarVeterinaria, eliminarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logout }}>{children}</AppContext.Provider>;
+actualizarVeterinaria, eliminarVeterinaria, veterinaria, setVeterinaria, carrito, agregar, cambiarCantidad, quitar, limpiar, resumen, pedidos, crearPedidoTransferencia, actualizarPedido, confirmarAnticipo, cambiarEstadoProduccion, buscarPedidoSeguimiento, usuario, login, logoutusuarios,
+crearUsuario, actualizarUsuario }}>{children}</AppContext.Provider>;
 }
 export const useApp = () => useContext(AppContext);

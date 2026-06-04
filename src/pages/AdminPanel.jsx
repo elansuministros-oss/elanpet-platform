@@ -49,7 +49,9 @@ const tabs = [
   'pedidos',
   'produccion',
   'veterinarias',
+  'usuarios',
 ];
+
   const agregarProducto = (e) => {
     e.preventDefault();
     if (!nuevoProducto.nombre || !nuevoProducto.precio) return;
@@ -630,6 +632,36 @@ const agregarVeterinaria = (e) => {
 >
   Eliminar
 </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  </section>
+)}
+{tab === 'usuarios' && (
+  <section className="panel">
+    <h2>Usuarios</h2>
+    <p className="note">
+      Administración de accesos para administradores y veterinarias.
+    </p>
+
+    <div className="admin-list">
+      {usuarios.map((u) => {
+        const vetAsignada = veterinarias.find(
+          (v) => v.id === u.veterinariaId
+        );
+
+        return (
+          <article key={u.id} className="admin-row no-image">
+            <div>
+              <b>{u.nombre}</b>
+              <span>Usuario: {u.usuario || u.email}</span>
+              <span>Rol: {u.rol}</span>
+              <span>
+                Veterinaria: {vetAsignada?.nombre || 'No asignada'}
+              </span>
+              <span>Estado: {u.activo ? 'Activo' : 'Inactivo'}</span>
             </div>
           </article>
         );

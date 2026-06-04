@@ -34,6 +34,7 @@ const [productoEditando, setProductoEditando] = useState(null);
   logo: '',
   activa: true,
 });
+const [busquedaVeterinaria, setBusquedaVeterinaria] = useState('');
 
   const guardarConfig = (campo, valor) => setConfiguracion({ ...configuracion, [campo]: valor });
 const tabs = [
@@ -393,6 +394,13 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
       {tab === 'veterinarias' && (
   <section className="panel">
     <h2>Veterinarias afiliadas</h2>
+    <input
+  type="text"
+  placeholder="Buscar veterinaria..."
+  value={busquedaVeterinaria}
+  onChange={(e) => setBusquedaVeterinaria(e.target.value)}
+  className="span-2"
+/>
     <form className="form-grid" onSubmit={agregarVeterinaria}>
   <input
     placeholder="Nombre de la veterinaria"
@@ -467,7 +475,20 @@ npm run build          <label>Slogan<input value={configuracion.slogan} onChange
     </p>
 
     <div className="admin-list">
-      {veterinarias.map((v) => {
+      {veterinarias
+  .filter((v) => {
+    const texto = busquedaVeterinaria.toLowerCase();
+
+    return (
+      v.nombre?.toLowerCase().includes(texto) ||
+      v.codigo?.toLowerCase().includes(texto) ||
+      v.responsable?.toLowerCase().includes(texto) ||
+      v.whatsapp?.toLowerCase().includes(texto) ||
+      v.email?.toLowerCase().includes(texto) ||
+      v.direccion?.toLowerCase().includes(texto)
+    );
+  })
+  .map((v) => {
         const ventasEntregadas = pedidos
           .filter(
             (p) =>

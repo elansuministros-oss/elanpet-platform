@@ -50,20 +50,24 @@ const veterinariasIniciales = [
 const usuariosIniciales = [
   { id: 'user-admin', nombre: 'Erick Cano', usuario: 'admin', email: 'elansuministros@gmail.com', password: 'ElanPet2026#', rol: 'admin', veterinariaId: '', activo: true, debeCambiarPassword: false, creadoEn: new Date().toISOString() },
   { id: 'user-vet-demo', nombre: 'Veterinaria Demo', usuario: 'vetdemo', email: 'vet@elanpet.com', password: 'VetDemo2026#', rol: 'veterinaria', veterinariaId: 'vet001', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
+  { id: 'user-produccion-demo', nombre: 'Producción ELANPET', usuario: 'produccion', email: 'produccion@elanpet.com', password: 'Produccion2026#', rol: 'produccion', veterinariaId: '', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
 ];
 
-export const estadosProduccion = ['pedido_recibido', 'anticipo_confirmado', 'diseno', 'corte_cnc', 'armado', 'pintura_acabado', 'control_calidad', 'listo_entrega', 'entregado'];
+export const estadosProduccion = ['pendiente', 'diseno', 'produccion', 'control_calidad', 'listo', 'entregado'];
 
 export const etiquetasEstado = {
+  pendiente: 'Pendiente',
   pendiente_pago: 'Pendiente de pago',
   pedido_recibido: 'Pedido recibido',
   anticipo_confirmado: 'Anticipo confirmado',
   pago_total_confirmado: 'Pago total confirmado',
   diseno: 'Diseño',
+  produccion: 'Producción',
   corte_cnc: 'Corte CNC',
   armado: 'Armado',
   pintura_acabado: 'Pintura / acabado',
   control_calidad: 'Control de calidad',
+  listo: 'Listo',
   listo_entrega: 'Listo para entrega',
   entregado: 'Entregado',
   cancelado: 'Cancelado',
@@ -442,11 +446,12 @@ export function AppProvider({ children }) {
       anticipoRecibido: 0,
       saldoPendiente: resumen.total,
       estado: 'pendiente_pago',
-      estadoProduccion: 'pedido_recibido',
+      estadoProduccion: 'pendiente',
       pagoEstado: 'pendiente_transferencia',
       seguimientoEstado: 'pendiente_pago',
       comisionEstado: 'no_generada',
-      historial: [{ estado: 'pedido_recibido', fecha: new Date().toISOString(), nota: 'Pedido creado desde carrito.' }],
+      ordenTrabajo: { codigoOT: `OT-${String(Date.now()).slice(-6)}`, responsable: '', observaciones: '', fecha: new Date().toISOString(), estadoProduccion: 'pendiente', evidencias: { inicial: '', proceso: '', terminado: '', entrega: '' } },
+      historial: [{ estado: 'pendiente', fecha: new Date().toISOString(), nota: 'Pedido creado desde carrito.' }],
       createdAt: new Date().toISOString(),
       fechaEstimada: '',
     };
@@ -469,7 +474,7 @@ export function AppProvider({ children }) {
       anticipoRecibido,
       saldoPendiente,
       estado: esTotal ? 'pago_total_confirmado' : 'anticipo_confirmado',
-      estadoProduccion: 'anticipo_confirmado',
+      estadoProduccion: 'pendiente',
       pagoEstado: esTotal ? 'pago_total_confirmado' : 'anticipo_confirmado',
       seguimientoEstado: 'en_produccion',
       comisionEstado: 'pendiente_entrega',
@@ -478,15 +483,65 @@ export function AppProvider({ children }) {
     return codigo;
   };
 
+  const crearOrdenTrabajoBase = (pedido) => ({
+    codigoOT: pedido?.ordenTrabajo?.codigoOT || `OT-${String(pedido?.id || Date.now()).replace(/[^0-9]/g, '').slice(-6) || Date.now()}`,
+    pedido: pedido?.codigoSeguimiento || pedido?.numero || '',
+    cliente: pedido?.cliente?.nombre || '',
+    veterinaria: pedido?.veterinaria?.nombre || '',
+    producto: (pedido?.items || []).map((i) => i.nombre).join(', '),
+    cantidad: (pedido?.items || []).reduce((a, i) => a + Number(i.cantidad || 0), 0),
+    responsable: pedido?.ordenTrabajo?.responsable || '',
+    observaciones: pedido?.ordenTrabajo?.observaciones || '',
+    fecha: pedido?.ordenTrabajo?.fecha || new Date().toISOString(),
+    estadoProduccion: pedido?.estadoProduccion || 'pendiente',
+    evidencias: { inicial: '', proceso: '', terminado: '', entrega: '', ...(pedido?.ordenTrabajo?.evidencias || {}) },
+  });
+
   const cambiarEstadoProduccion = (pedido, estadoProduccion) => {
     const entregado = estadoProduccion === 'entregado';
+    const ordenTrabajo = {
+      ...crearOrdenTrabajoBase(pedido),
+      ...(pedido.ordenTrabajo || {}),
+      estadoProduccion,
+    };
+
     actualizarPedido({
       ...pedido,
       estado: entregado ? 'entregado' : pedido.estado,
       estadoProduccion,
       seguimientoEstado: estadoProduccion,
+      ordenTrabajo,
       comisionEstado: entregado ? 'pendiente' : pedido.comisionEstado,
       historial: [...(pedido.historial || []), { estado: estadoProduccion, fecha: new Date().toISOString(), nota: etiquetasEstado[estadoProduccion] || estadoProduccion }],
+    });
+  };
+
+  const actualizarOrdenTrabajo = (pedido, datosOrden) => {
+    const ordenTrabajo = {
+      ...crearOrdenTrabajoBase(pedido),
+      ...(pedido.ordenTrabajo || {}),
+      ...datosOrden,
+      evidencias: {
+        ...crearOrdenTrabajoBase(pedido).evidencias,
+        ...(pedido.ordenTrabajo?.evidencias || {}),
+        ...(datosOrden.evidencias || {}),
+      },
+    };
+
+    actualizarPedido({
+      ...pedido,
+      ordenTrabajo,
+      estadoProduccion: ordenTrabajo.estadoProduccion || pedido.estadoProduccion || 'pendiente',
+      seguimientoEstado: ordenTrabajo.estadoProduccion || pedido.seguimientoEstado,
+    });
+  };
+
+  const guardarEvidenciaProduccion = (pedido, tipo, imagen) => {
+    actualizarOrdenTrabajo(pedido, {
+      evidencias: {
+        ...(pedido.ordenTrabajo?.evidencias || {}),
+        [tipo]: imagen,
+      },
     });
   };
 
@@ -703,6 +758,8 @@ export function AppProvider({ children }) {
         actualizarPedido,
         confirmarAnticipo,
         cambiarEstadoProduccion,
+        actualizarOrdenTrabajo,
+        guardarEvidenciaProduccion,
         buscarPedidoSeguimiento,
         usuario,
         login,

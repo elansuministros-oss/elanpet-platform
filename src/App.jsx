@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Catalogo from './pages/Catalogo';
 import Carrito from './pages/Carrito';
 import VeterinariaPanel from './pages/VeterinariaPanel';
+import ProduccionPanel from './pages/ProduccionPanel';
 import AdminPanel from './pages/AdminPanel';
 import Login from './pages/Login';
 import Contacto from './pages/Contacto';
@@ -42,15 +43,20 @@ export default function App() {
       {page === 'contacto' && <Contacto />}
       {page === 'seguimiento' && <Seguimiento />}
       {page === 'login' && <Login setPage={ir} />}
-      {page === 'landing-vet' && (
-        <LandingVeterinaria setPage={ir} />
-      )}
+      {page === 'landing-vet' && <LandingVeterinaria setPage={ir} />}
 
       {page === 'vet' &&
         (usuario?.rol === 'veterinaria' ? (
           <VeterinariaPanel />
         ) : (
           <Login setPage={ir} destino="vet" />
+        ))}
+
+      {page === 'produccion' &&
+        (usuario?.rol === 'admin' || usuario?.rol === 'produccion' ? (
+          <ProduccionPanel />
+        ) : (
+          <Login setPage={ir} destino="produccion" />
         ))}
 
       {page === 'admin' &&

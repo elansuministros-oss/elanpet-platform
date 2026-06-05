@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
+function destinoPorRol(rol) {
+  if (rol === 'admin') return 'admin';
+  if (rol === 'produccion') return 'produccion';
+  return 'vet';
+}
+
 export default function Login({ setPage, destino }) {
   const { login } = useApp();
   const [email, setEmail] = useState('');
@@ -18,8 +24,20 @@ export default function Login({ setPage, destino }) {
       return setError('Usuario o contraseña incorrectos.');
     }
 
+    if (destino === 'admin' && res.rol !== 'admin') {
+      return setError('Este usuario no tiene permiso de administrador.');
+    }
+
+    if (destino === 'vet' && res.rol !== 'veterinaria') {
+      return setError('Este usuario no tiene permiso de veterinaria.');
+    }
+
+    if (destino === 'produccion' && !['admin', 'produccion'].includes(res.rol)) {
+      return setError('Este usuario no tiene permiso de producción.');
+    }
+
     setError('');
-    setPage(destino || (res.rol === 'admin' ? 'admin' : 'vet'));
+    setPage(destino || destinoPorRol(res.rol));
   };
 
   return (
@@ -30,14 +48,14 @@ export default function Login({ setPage, destino }) {
         </span>
 
         <h1>Portal ELANPET</h1>
-        <p>Este acceso es solo para administrador ELAN y veterinarias afiliadas.</p>
+        <p>Este acceso es solo para administrador ELAN, producción y veterinarias afiliadas.</p>
 
         <form onSubmit={entrar}>
           <label>Usuario o correo</label>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin, vetdemo o correo"
+            placeholder="admin, produccion, vetdemo o correo"
             autoComplete="username"
           />
 

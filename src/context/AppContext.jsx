@@ -48,9 +48,9 @@ const veterinariasIniciales = [
 ];
 
 const usuariosIniciales = [
-  { id: 'user-admin', nombre: 'Erick Cano', usuario: 'admin', email: 'elansuministros@gmail.com', password: 'ElanPet2026#', rol: 'admin', veterinariaId: '', activo: true, debeCambiarPassword: false, creadoEn: new Date().toISOString() },
-  { id: 'user-vet-demo', nombre: 'Veterinaria Demo', usuario: 'vetdemo', email: 'vet@elanpet.com', password: 'VetDemo2026#', rol: 'veterinaria', veterinariaId: 'vet001', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
-  { id: 'user-produccion-demo', nombre: 'Producción ELANPET', usuario: 'produccion', email: 'produccion@elanpet.com', password: 'Produccion2026#', rol: 'produccion', veterinariaId: '', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
+  { id: 'user-admin', nombre: 'Erick Cano', usuario: 'admin', email: 'elansuministros@gmail.com', password: '123456', rol: 'admin', veterinariaId: '', activo: true, debeCambiarPassword: false, creadoEn: new Date().toISOString() },
+  { id: 'user-vet-demo', nombre: 'Veterinaria Demo', usuario: 'vetdemo', email: 'vet@elanpet.com', password: '123456', rol: 'veterinaria', veterinariaId: 'vet001', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
+  { id: 'user-produccion-demo', nombre: 'Producción ELANPET', usuario: 'produccion', email: 'produccion@elanpet.com', password: '123456', rol: 'produccion', veterinariaId: '', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
 ];
 
 export const estadosProduccion = ['pendiente', 'diseno', 'produccion', 'control_calidad', 'listo', 'entregado'];
@@ -282,6 +282,13 @@ export function AppProvider({ children }) {
               })
             );
           }
+
+          usuariosParaCrear.push(
+            mapUsuarioToDb({
+              ...usuariosIniciales[2],
+              veterinariaId: '',
+            })
+          );
 
           const { data: usuariosCreados, error: crearUsersError } = await supabase
             .from('usuarios')

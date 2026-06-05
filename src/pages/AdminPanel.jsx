@@ -563,8 +563,23 @@ export default function AdminPanel() {
               <input type={mostrarPasswordUsuario ? 'text' : 'password'} placeholder={nuevoUsuario.id ? 'Nueva contraseña opcional' : 'Contraseña temporal'} value={nuevoUsuario.password || ''} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })} autoComplete="new-password" />
               <button type="button" className="password-toggle" onClick={() => setMostrarPasswordUsuario((prev) => !prev)}>{mostrarPasswordUsuario ? 'OCULTAR' : 'VER'}</button>
             </div>
-            <select value={nuevoUsuario.rol || 'veterinaria'} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value, veterinariaId: e.target.value === 'admin' ? '' : nuevoUsuario.veterinariaId })}><option value="veterinaria">Veterinaria</option><option value="admin">Administrador</option></select>
-            {(nuevoUsuario.rol || 'veterinaria') === 'veterinaria' && <select value={nuevoUsuario.veterinariaId || ''} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, veterinariaId: e.target.value })}><option value="">Seleccionar veterinaria existente</option>{veterinarias.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}</select>}
+<select
+  value={nuevoUsuario.rol || 'veterinaria'}
+  onChange={(e) =>
+    setNuevoUsuario({
+      ...nuevoUsuario,
+      rol: e.target.value,
+      veterinariaId:
+        e.target.value === 'veterinaria'
+          ? nuevoUsuario.veterinariaId
+          : '',
+    })
+  }
+>
+  <option value="veterinaria">Veterinaria</option>
+  <option value="admin">Administrador</option>
+  <option value="produccion">Producción</option>
+</select>            {(nuevoUsuario.rol || 'veterinaria') === 'veterinaria' && <select value={nuevoUsuario.veterinariaId || ''} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, veterinariaId: e.target.value })}><option value="">Seleccionar veterinaria existente</option>{veterinarias.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}</select>}
             <button type="submit">{nuevoUsuario.id ? 'Actualizar usuario' : 'Crear usuario'}</button>
             {nuevoUsuario.id && <button type="button" className="btn-outline" onClick={resetUsuario}>Cancelar edición</button>}
           </form>

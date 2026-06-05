@@ -930,3 +930,38 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
 .password-toggle svg {
   pointer-events: none;
 }
+.login-card .password-field {
+  position: relative;
+  width: 100%;
+}
+
+.login-card .password-field input {
+  width: 100%;
+  padding-right: 58px !important;
+}
+
+.login-card .password-toggle {
+  position: absolute !important;
+  right: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #1f2937 !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.login-card .password-toggle svg {
+  display: block;
+  pointer-events: none;
+}

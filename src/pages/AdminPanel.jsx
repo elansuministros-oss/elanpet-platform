@@ -679,14 +679,6 @@ const agregarVeterinaria = (e) => {
 
     <form className="form-grid" onSubmit={agregarUsuario}>
       <input
-        placeholder="Nombre completo"
-        value={nuevoUsuario.nombre}
-        onChange={(e) =>
-          setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })
-        }
-      />
-
-      <input
         placeholder="Usuario"
         value={nuevoUsuario.usuario}
         onChange={(e) =>
@@ -709,16 +701,6 @@ const agregarVeterinaria = (e) => {
           setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })
         }
       />
-
-      <select
-        value={nuevoUsuario.rol}
-        onChange={(e) =>
-          setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })
-        }
-      >
-        <option value="veterinaria">Veterinaria</option>
-        <option value="admin">Administrador</option>
-      </select>
 
       <select
         value={nuevoUsuario.veterinariaId}

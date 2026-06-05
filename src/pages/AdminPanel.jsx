@@ -81,6 +81,7 @@ export default function AdminPanel() {
   const [busquedaVeterinaria, setBusquedaVeterinaria] = useState('');
   const [nuevoUsuario, setNuevoUsuario] = useState(usuarioVacio);
   const [mostrarPasswordUsuario, setMostrarPasswordUsuario] = useState(false);
+  const [veterinariaDetalleId, setVeterinariaDetalleId] = useState(null);
 
   const usuariosPorVeterinaria = useMemo(() => {
     const mapa = new Map();
@@ -225,6 +226,15 @@ export default function AdminPanel() {
   };
 
   const marcarComisionPagada = (pedido) => actualizarPedido({ ...pedido, comisionEstado: 'pagada' });
+
+  const calcularComisionPedido = (pedido) => {
+    const total = Number(pedido?.resumen?.total || 0);
+    const porcentaje = Number(pedido?.veterinaria?.comisionPorcentaje || pedido?.veterinaria?.comision_porcentaje || 10);
+    return Number(pedido?.resumen?.comision ?? (total * porcentaje) / 100);
+  };
+
+  const obtenerEstadoPedido = (pedido) =>
+    etiquetasEstado[pedido?.estadoProduccion] || etiquetasEstado[pedido?.estado] || pedido?.estadoProduccion || pedido?.estado || 'Sin estado';
 
   function mensajeSeguimiento(pedido, codigo) {
     return `Hola ${pedido.cliente?.nombre}.\n\nConfirmamos la recepción de tu ${pedido.pagoTipo === 'total' ? 'pago total' : 'anticipo'}.\n\nTu pedido ya fue ingresado a producción.\n\nCódigo de seguimiento:\n${codigo}\n\nConsulta el avance en:\nhttps://elanpet.com/seguimiento\n\nGracias por confiar en ELAN PET.`;
@@ -451,9 +461,15 @@ export default function AdminPanel() {
               })
               .map((v) => {
                 const usuarioVet = usuariosPorVeterinaria.get(v.id);
-                const pedidosVeterinaria = pedidos.filter((p) => p.veterinaria?.id === v.id);
-                const ventasEntregadas = pedidosVeterinaria.filter((p) => p.estado === 'entregado').reduce((a, p) => a + (p.resumen?.total || 0), 0);
-                const comisionVeterinaria = pedidosVeterinaria.filter((p) => p.estado === 'entregado').reduce((a, p) => a + (p.resumen?.comision || 0), 0);
+                const pedidosVeterinaria = pedidos.filter((p) => p.veterinaria?.id === v.id || p.veterinariaId === v.id);
+                const pedidosEntregados = pedidosVeterinaria.filter((p) => p.estado === 'entregado' || p.estadoProduccion === 'entregado');
+                const comisionesPendientes = pedidosEntregados.filter((p) => p.comisionEstado === 'pendiente');
+                const comisionesPagadas = pedidosEntregados.filter((p) => p.comisionEstado === 'pagada');
+                const ventasEntregadas = pedidosEntregados.reduce((a, p) => a + Number(p.resumen?.total || 0), 0);
+                const comisionPendiente = comisionesPendientes.reduce((a, p) => a + calcularComisionPedido(p), 0);
+                const comisionPagada = comisionesPagadas.reduce((a, p) => a + calcularComisionPedido(p), 0);
+                const comisionVeterinaria = comisionPendiente + comisionPagada;
+                const mostrarDetalle = veterinariaDetalleId === v.id;
                 const linkBase = typeof window !== 'undefined' ? window.location.origin : '';
                 const linkAfiliado = v.linkAfiliado?.startsWith('http') ? v.linkAfiliado : `${linkBase}${v.linkAfiliado || `/?vet=${v.slug || v.codigo}`}`;
                 return (
@@ -468,7 +484,9 @@ export default function AdminPanel() {
                       {v.whatsapp && <span>WhatsApp: {v.whatsapp}</span>}
                       {v.email && <span>Correo: {v.email}</span>}
                       {v.direccion && <span>Dirección: {v.direccion}</span>}
-                      <span>Pedidos: {pedidosVeterinaria.length} · Ventas: {formatoC$(ventasEntregadas)} · Comisión: {formatoC$(comisionVeterinaria)}</span>
+                      <span>Pedidos: {pedidosVeterinaria.length} · Ventas entregadas: {formatoC$(ventasEntregadas)}</span>
+                      <span>Comisión pendiente: {formatoC$(comisionPendiente)} · Comisión pagada: {formatoC$(comisionPagada)}</span>
+                      <span>Comisión total generada: {formatoC$(comisionVeterinaria)}</span>
                     </div>
                     <div className="qr-box">
                       <QRCodeCanvas id={`qr-${v.id}`} value={linkAfiliado} size={120} includeMargin />
@@ -476,10 +494,56 @@ export default function AdminPanel() {
                       <button type="button" className="btn-outline" onClick={() => navigator.clipboard.writeText(linkAfiliado)}>Copiar enlace</button>
                       <button type="button" className="btn-outline" onClick={() => crearAccesoVeterinaria(v)}>{usuarioVet ? 'Ver usuario asignado' : 'Crear acceso'}</button>
                       <button type="button" className="btn-outline" onClick={() => resetearAccesoVeterinaria(v)}>Resetear contraseña</button>
+                      <button type="button" className="btn-outline" onClick={() => setVeterinariaDetalleId(mostrarDetalle ? null : v.id)}>{mostrarDetalle ? 'Ocultar pedidos' : 'Ver pedidos'}</button>
                       <button type="button" className="btn-outline" onClick={() => { setVeterinariaEditando(v); setNuevaVeterinaria({ nombre: v.nombre || '', responsable: v.responsable || '', whatsapp: v.whatsapp || '', email: v.email || '', direccion: v.direccion || '', comisionPorcentaje: v.comisionPorcentaje || 10, logo: v.logo || '', activa: v.activa !== false }); }}>Editar</button>
                       <button type="button" className="btn-outline" onClick={() => actualizarVeterinaria({ ...v, activa: !v.activa })}>{v.activa ? 'Desactivar' : 'Activar'}</button>
                       <button type="button" className="btn-outline" onClick={() => { if (window.confirm(`¿Eliminar ${v.nombre}?`)) eliminarVeterinaria(v.id); }}>Eliminar</button>
                     </div>
+                    {mostrarDetalle && (
+                      <div className="edit-box">
+                        <h3>Pedidos y comisiones de {v.nombre}</h3>
+                        {pedidosVeterinaria.length === 0 ? (
+                          <p className="note">Esta veterinaria todavía no tiene pedidos registrados.</p>
+                        ) : (
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Pedido</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Comisión</th>
+                                <th>Pago comisión</th>
+                                <th>Acción</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pedidosVeterinaria.map((p) => {
+                                const entregado = p.estado === 'entregado' || p.estadoProduccion === 'entregado';
+                                const comision = entregado ? calcularComisionPedido(p) : 0;
+                                return (
+                                  <tr key={p.id}>
+                                    <td>{p.codigoSeguimiento || p.numero || p.id}</td>
+                                    <td>{p.cliente?.nombre || 'Sin cliente'}</td>
+                                    <td>{formatoC$(p.resumen?.total || 0)}</td>
+                                    <td>{obtenerEstadoPedido(p)}</td>
+                                    <td>{entregado ? formatoC$(comision) : 'No generada'}</td>
+                                    <td>{entregado ? (p.comisionEstado === 'pagada' ? 'Pagada' : 'Pendiente') : 'No aplica'}</td>
+                                    <td>
+                                      {entregado && p.comisionEstado !== 'pagada' ? (
+                                        <button type="button" className="btn-outline" onClick={() => marcarComisionPagada(p)}>Marcar pagada</button>
+                                      ) : (
+                                        <span className="note">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
                   </article>
                 );
               })}

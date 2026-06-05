@@ -561,6 +561,12 @@ export function AppProvider({ children }) {
   };
 
   const login = ({ email, password }) => {
+    console.log('LOGIN', {
+  email,
+  password,
+  usuarios,
+  supabaseListo
+});
     const acceso = normalizarUsuario(email);
     const clave = String(password || '').trim();
 

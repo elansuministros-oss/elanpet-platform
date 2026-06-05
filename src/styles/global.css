@@ -968,3 +968,143 @@ main{max-width:1240px;margin:auto;padding:34px 22px}.badge{display:inline-block;
   display: block;
   pointer-events: none;
 }
+/* =========================================
+   ELANPET ADMIN FIX V8
+   Cuentas, usuarios, veterinarias y móvil
+========================================= */
+.admin-row-actions {
+  grid-template-columns: 88px minmax(220px, 1fr) auto auto auto auto;
+}
+
+.admin-thumb-empty {
+  width: 88px;
+  height: 74px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.actions,
+.qr-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.qr-box {
+  justify-content: flex-start;
+  max-width: 360px;
+}
+
+.qr-box small {
+  width: 100%;
+  color: #64748b;
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+.vet-card {
+  align-items: start;
+}
+
+.vet-card .qr-box button,
+.actions button {
+  width: auto;
+}
+
+textarea {
+  font-family: inherit;
+  padding: 13px;
+  border: 1px solid #d7dde6;
+  border-radius: 12px;
+  width: 100%;
+  margin: 6px 0;
+  background: white;
+}
+
+@media (max-width: 900px) {
+  main {
+    max-width: 100%;
+    padding: 18px 12px;
+  }
+
+  .admin-head {
+    display: grid !important;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .admin-head h1 {
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .admin-tabs {
+    display: flex !important;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    gap: 8px;
+    padding-bottom: 10px;
+    scrollbar-width: none;
+  }
+
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-tabs button {
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: max-content;
+    white-space: nowrap;
+  }
+
+  .admin-row,
+  .admin-row.no-image,
+  .admin-row-actions {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .admin-row img,
+  .admin-thumb-empty {
+    width: 100% !important;
+    height: 160px !important;
+  }
+
+  .actions,
+  .qr-box {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .actions button,
+  .qr-box button,
+  .vet-card .qr-box button {
+    width: 100% !important;
+  }
+
+  .qr-box canvas {
+    max-width: 120px;
+  }
+
+  .password-field input {
+    padding-right: 96px !important;
+  }
+
+  .password-field .password-toggle {
+    width: 76px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    background: #eaf2ff !important;
+    color: #1e5aa8 !important;
+    font-size: 11px !important;
+    border-radius: 18px !important;
+  }
+}

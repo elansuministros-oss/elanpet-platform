@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { productosIniciales, veterinariaDemo } from '../data/productos';
 import { resumenCarrito } from '../lib/calculos';
+import { supabase } from '../lib/supabase';
 
 const AppContext = createContext(null);
 
@@ -92,6 +93,87 @@ function crearSlug(texto) {
     .replace(/(^-|-$)/g, '');
 }
 
+
+function normalizarVeterinariaDesdeDB(row) {
+  if (!row) return null;
+  const slug = row.slug || crearSlug(row.nombre);
+  return {
+    id: row.id,
+    codigo: row.codigo || '',
+    nombre: row.nombre || '',
+    slug,
+    telefono: row.telefono || row.whatsapp || '',
+    whatsapp: row.whatsapp || row.telefono || '',
+    email: row.email || row.correo || '',
+    direccion: row.direccion || '',
+    responsable: row.responsable || '',
+    logo: row.logo || '',
+    comisionPorcentaje: Number(row.comision_porcentaje || 10),
+    linkAfiliado: row.link_afiliado || `/?vet=${slug}`,
+    activa: row.activa !== false,
+    escaneos: Number(row.escaneos || 0),
+    pedidos: Number(row.pedidos_count || 0),
+    ventas: Number(row.ventas || 0),
+    comision: Number(row.comision || 0),
+  };
+}
+
+function veterinariaParaDB(datos) {
+  const slug = datos.slug || crearSlug(datos.nombre);
+  return {
+    codigo: datos.codigo || '',
+    nombre: datos.nombre || '',
+    slug,
+    telefono: datos.telefono || datos.whatsapp || '',
+    whatsapp: datos.whatsapp || datos.telefono || '',
+    email: datos.email || datos.correo || '',
+    correo: datos.email || datos.correo || '',
+    direccion: datos.direccion || '',
+    responsable: datos.responsable || '',
+    logo: datos.logo || '',
+    comision_porcentaje: Number(datos.comisionPorcentaje || datos.comision_porcentaje || 10),
+    link_afiliado: datos.linkAfiliado || `/?vet=${slug}`,
+    activa: datos.activa !== false,
+    escaneos: Number(datos.escaneos || 0),
+    pedidos_count: Number(datos.pedidos || datos.pedidos_count || 0),
+    ventas: Number(datos.ventas || 0),
+    comision: Number(datos.comision || 0),
+  };
+}
+
+function normalizarUsuarioDesdeDB(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    nombre: row.nombre || row.usuario || row.email || '',
+    usuario: String(row.usuario || '').toLowerCase().trim(),
+    email: String(row.email || '').toLowerCase().trim(),
+    password: String(row.password || '').trim(),
+    rol: row.rol || 'veterinaria',
+    veterinariaId: row.veterinaria_id || '',
+    activo: row.activo !== false,
+    debeCambiarPassword: row.debe_cambiar_password !== false,
+    creadoEn: row.created_at || new Date().toISOString(),
+  };
+}
+
+function usuarioParaDB(datos) {
+  return {
+    nombre: datos.nombre || datos.usuario || datos.email || '',
+    usuario: String(datos.usuario || '').toLowerCase().trim(),
+    email: String(datos.email || '').toLowerCase().trim(),
+    password: String(datos.password || 'Temporal2026#').trim(),
+    rol: datos.rol || 'veterinaria',
+    veterinaria_id: (datos.rol || 'veterinaria') === 'veterinaria' ? datos.veterinariaId || datos.veterinaria_id || null : null,
+    activo: datos.activo !== false,
+    debe_cambiar_password: datos.debeCambiarPassword !== false,
+  };
+}
+
+function esUUID(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(id || ''));
+}
+
 export function AppProvider({ children }) {
   const [configuracion, setConfiguracion] = useState(() => leerStorage('elanpet_configuracion', configuracionInicial));
   const [cuentasBancarias, setCuentasBancarias] = useState(() => leerStorage('elanpet_cuentas_bancarias', cuentasIniciales));
@@ -105,6 +187,86 @@ export function AppProvider({ children }) {
   const [pedidos, setPedidos] = useState(() => leerStorage('elanpet_pedidos', []));
   const [usuario, setUsuario] = useState(() => leerStorage('elanpet_usuario_actual', null));
   const [usuarios, setUsuarios] = useState(() => leerStorage('elanpet_usuarios', usuariosIniciales));
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarDatosBase() {
+      if (!supabase) return;
+
+      try {
+        const { data: vetsDB, error: errorVets } = await supabase
+          .from('veterinarias')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (errorVets) throw errorVets;
+
+        let vetsNormalizadas = (vetsDB || []).map(normalizarVeterinariaDesdeDB).filter(Boolean);
+
+        if (vetsNormalizadas.length === 0) {
+          const vetsParaInsertar = veterinariasIniciales.map((v) => veterinariaParaDB(v));
+          const { data: vetsCreadas, error: errorCrearVets } = await supabase
+            .from('veterinarias')
+            .insert(vetsParaInsertar)
+            .select('*');
+
+          if (errorCrearVets) throw errorCrearVets;
+          vetsNormalizadas = (vetsCreadas || []).map(normalizarVeterinariaDesdeDB).filter(Boolean);
+        }
+
+        const { data: usuariosDB, error: errorUsuarios } = await supabase
+          .from('usuarios')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (errorUsuarios) throw errorUsuarios;
+
+        let usuariosNormalizados = (usuariosDB || []).map(normalizarUsuarioDesdeDB).filter(Boolean);
+
+        if (usuariosNormalizados.length === 0) {
+          const vetDemoDB = vetsNormalizadas.find((v) => v.slug === 'veterinaria-demo') || vetsNormalizadas[0];
+          const usuariosBase = usuariosIniciales.map((u) => ({
+            ...u,
+            veterinariaId: u.rol === 'veterinaria' ? vetDemoDB?.id || null : null,
+          }));
+
+          const { data: usuariosCreados, error: errorCrearUsuarios } = await supabase
+            .from('usuarios')
+            .insert(usuariosBase.map((u) => usuarioParaDB(u)))
+            .select('*');
+
+          if (errorCrearUsuarios) throw errorCrearUsuarios;
+          usuariosNormalizados = (usuariosCreados || []).map(normalizarUsuarioDesdeDB).filter(Boolean);
+        }
+
+        if (cancelado) return;
+
+        setVeterinarias(vetsNormalizadas);
+        setUsuarios(usuariosNormalizados);
+
+        const usuarioActual = leerStorage('elanpet_usuario_actual', null);
+        if (usuarioActual?.id) {
+          const actualizado = usuariosNormalizados.find((u) => u.id === usuarioActual.id || u.usuario === usuarioActual.usuario);
+          if (actualizado) setUsuario(actualizado);
+        }
+
+        const vetActual = leerStorage('elanpet_veterinaria_actual', null);
+        if (vetActual?.id) {
+          const actualizada = vetsNormalizadas.find((v) => v.id === vetActual.id || v.slug === vetActual.slug);
+          if (actualizada) setVeterinaria(actualizada);
+        }
+      } catch (error) {
+        console.error('Supabase no pudo cargar usuarios/veterinarias. Se mantiene respaldo local:', error);
+      }
+    }
+
+    cargarDatosBase();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   useEffect(() => localStorage.setItem('elanpet_configuracion', JSON.stringify(configuracion)), [configuracion]);
   useEffect(() => localStorage.setItem('elanpet_cuentas_bancarias', JSON.stringify(cuentasBancarias)), [cuentasBancarias]);
@@ -132,7 +294,7 @@ export function AppProvider({ children }) {
     const slug = crearSlug(datos.nombre);
     const codigo = datos.codigo || `VET${String(veterinarias.length + 1).padStart(3, '0')}`;
     const nueva = {
-      id: `vet-${Date.now()}`,
+      id: `temp-vet-${Date.now()}`,
       codigo,
       nombre: datos.nombre,
       slug,
@@ -150,7 +312,23 @@ export function AppProvider({ children }) {
       ventas: 0,
       comision: 0,
     };
+
     setVeterinarias((prev) => [nueva, ...prev]);
+
+    if (supabase) {
+      supabase
+        .from('veterinarias')
+        .insert(veterinariaParaDB(nueva))
+        .select('*')
+        .single()
+        .then(({ data, error }) => {
+          if (error) throw error;
+          const guardada = normalizarVeterinariaDesdeDB(data);
+          setVeterinarias((prev) => prev.map((v) => (v.id === nueva.id ? guardada : v)));
+        })
+        .catch((error) => console.error('No se pudo crear veterinaria en Supabase:', error));
+    }
+
     return nueva;
   };
 
@@ -160,11 +338,33 @@ export function AppProvider({ children }) {
 
     setVeterinarias((prev) => prev.map((v) => (v.id === actualizada.id ? { ...v, ...actualizada } : v)));
     if (veterinaria?.id === actualizada.id) setVeterinaria((prev) => ({ ...prev, ...actualizada }));
+
+    if (supabase && esUUID(actualizada.id)) {
+      supabase
+        .from('veterinarias')
+        .update(veterinariaParaDB(actualizada))
+        .eq('id', actualizada.id)
+        .then(({ error }) => {
+          if (error) throw error;
+        })
+        .catch((error) => console.error('No se pudo actualizar veterinaria en Supabase:', error));
+    }
   };
 
   const eliminarVeterinaria = (id) => {
     setVeterinarias((prev) => prev.filter((v) => v.id !== id));
     setUsuarios((prev) => prev.map((u) => (u.veterinariaId === id ? { ...u, veterinariaId: '', activo: false } : u)));
+
+    if (supabase && esUUID(id)) {
+      supabase
+        .from('veterinarias')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) throw error;
+        })
+        .catch((error) => console.error('No se pudo eliminar veterinaria en Supabase:', error));
+    }
   };
 
   const agregar = (p) =>
@@ -293,7 +493,7 @@ export function AppProvider({ children }) {
     if (existe) return { ok: false, error: 'usuario_duplicado' };
 
     const nuevo = {
-      id: `user-${Date.now()}`,
+      id: `temp-user-${Date.now()}`,
       nombre: datos.nombre || usuarioLimpio,
       usuario: usuarioLimpio,
       email: emailLimpio,
@@ -304,7 +504,23 @@ export function AppProvider({ children }) {
       debeCambiarPassword: datos.debeCambiarPassword !== false,
       creadoEn: new Date().toISOString(),
     };
+
     setUsuarios((prev) => [nuevo, ...prev]);
+
+    if (supabase) {
+      supabase
+        .from('usuarios')
+        .insert(usuarioParaDB(nuevo))
+        .select('*')
+        .single()
+        .then(({ data, error }) => {
+          if (error) throw error;
+          const guardado = normalizarUsuarioDesdeDB(data);
+          setUsuarios((prev) => prev.map((u) => (u.id === nuevo.id ? guardado : u)));
+        })
+        .catch((error) => console.error('No se pudo crear usuario en Supabase:', error));
+    }
+
     return { ok: true, usuario: nuevo };
   };
 
@@ -327,7 +543,22 @@ export function AppProvider({ children }) {
         return actualizadoFinal;
       })
     );
+
     if (usuario?.id === usuarioActualizado.id && actualizadoFinal) setUsuario(actualizadoFinal);
+
+    if (supabase && esUUID(usuarioActualizado.id)) {
+      const datosDB = usuarioParaDB({ ...usuarioActualizado, password: usuarioActualizado.password || undefined });
+      if (!Object.prototype.hasOwnProperty.call(usuarioActualizado, 'password')) delete datosDB.password;
+
+      supabase
+        .from('usuarios')
+        .update(datosDB)
+        .eq('id', usuarioActualizado.id)
+        .then(({ error }) => {
+          if (error) throw error;
+        })
+        .catch((error) => console.error('No se pudo actualizar usuario en Supabase:', error));
+    }
   };
 
   const eliminarUsuario = (id) => {
@@ -337,7 +568,19 @@ export function AppProvider({ children }) {
       if (usuarioEliminar?.rol === 'admin' && adminsActivos.length <= 1) return prev;
       return prev.filter((u) => u.id !== id);
     });
+
     if (usuario?.id === id) setUsuario(null);
+
+    if (supabase && esUUID(id)) {
+      supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) throw error;
+        })
+        .catch((error) => console.error('No se pudo eliminar usuario en Supabase:', error));
+    }
   };
 
   const actualizarProducto = (producto) => setProductos((prev) => prev.map((p) => (p.id === producto.id ? { ...p, ...producto } : p)));

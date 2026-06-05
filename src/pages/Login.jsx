@@ -38,37 +38,26 @@ export default function Login({ setPage, destino }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="admin, vetdemo o correo"
+            autoComplete="username"
           />
 
           <label>Contraseña</label>
-          <div style={{ position: 'relative' }}>
+
+          <div className="password-field">
             <input
               type={mostrarPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
-              style={{ paddingRight: '46px' }}
+              autoComplete="current-password"
             />
 
             <button
               type="button"
+              className="password-toggle"
               onClick={() => setMostrarPassword((prev) => !prev)}
               aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              style={{
-                position: 'absolute',
-                right: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#555',
-              }}
             >
               {mostrarPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>

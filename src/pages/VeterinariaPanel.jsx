@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { etiquetasEstado, useApp } from '../context/AppContext';
 import { formatoC$ } from '../lib/calculos';
 
 export default function VeterinariaPanel() {
-  const { veterinaria, pedidos, usuario } = useApp();
+  const { veterinaria, pedidos, usuario, actualizarUsuario } = useApp();
+
+  const [passwordActual, setPasswordActual] = useState('');
+  const [passwordNueva, setPasswordNueva] = useState('');
+  const [passwordConfirmar, setPasswordConfirmar] = useState('');
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mensajePassword, setMensajePassword] = useState('');
+  const [errorPassword, setErrorPassword] = useState('');
 
   if (!usuario || usuario.rol !== 'veterinaria') {
     return (
@@ -28,23 +36,66 @@ export default function VeterinariaPanel() {
     );
   }
 
+  const cambiarMiPassword = async (e) => {
+    e.preventDefault();
+
+    setMensajePassword('');
+    setErrorPassword('');
+
+    if (String(passwordActual).trim() !== String(usuario.password).trim()) {
+      setErrorPassword('La contraseña actual no coincide.');
+      return;
+    }
+
+    if (String(passwordNueva).trim().length < 6) {
+      setErrorPassword('La nueva contraseña debe tener mínimo 6 caracteres.');
+      return;
+    }
+
+    if (passwordNueva !== passwordConfirmar) {
+      setErrorPassword('La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
+
+    const res = await actualizarUsuario({
+      ...usuario,
+      password: String(passwordNueva).trim(),
+      debeCambiarPassword: false,
+    });
+
+    if (res?.ok === false) {
+      setErrorPassword(res.error || 'No se pudo actualizar la contraseña.');
+      return;
+    }
+
+    setPasswordActual('');
+    setPasswordNueva('');
+    setPasswordConfirmar('');
+    setMensajePassword('Contraseña actualizada correctamente.');
+  };
+
   const url = `https://elanpet.com/v/${veterinaria.codigo}`;
   const misPedidos = pedidos.filter((p) => p.veterinaria?.id === veterinaria.id);
   const entregados = misPedidos.filter((p) => p.estado === 'entregado');
+
   const comisionesPendientes = entregados.filter(
     (p) => p.comisionEstado === 'pendiente'
   );
+
   const comisionesPagadas = entregados.filter(
     (p) => p.comisionEstado === 'pagada'
   );
+
   const totalVendido = entregados.reduce(
     (a, p) => a + (p.resumen?.total || 0),
     0
   );
+
   const totalComisionPendiente = comisionesPendientes.reduce(
     (a, p) => a + (p.resumen?.comision || 0),
     0
   );
+
   const totalComisionPagada = comisionesPagadas.reduce(
     (a, p) => a + (p.resumen?.comision || 0),
     0
@@ -88,6 +139,62 @@ export default function VeterinariaPanel() {
           </p>
         </section>
       </div>
+
+      <section className="panel section-block">
+        <h2>
+          <LockKeyhole size={20} /> Cambiar mi contraseña
+        </h2>
+
+        <form className="form-grid" onSubmit={cambiarMiPassword}>
+          <label>
+            Contraseña actual
+            <div className="password-field">
+              <input
+                type={mostrarPassword ? 'text' : 'password'}
+                value={passwordActual}
+                onChange={(e) => setPasswordActual(e.target.value)}
+                placeholder="Contraseña actual"
+              />
+            </div>
+          </label>
+
+          <label>
+            Nueva contraseña
+            <div className="password-field">
+              <input
+                type={mostrarPassword ? 'text' : 'password'}
+                value={passwordNueva}
+                onChange={(e) => setPasswordNueva(e.target.value)}
+                placeholder="Nueva contraseña"
+              />
+            </div>
+          </label>
+
+          <label>
+            Confirmar nueva contraseña
+            <div className="password-field">
+              <input
+                type={mostrarPassword ? 'text' : 'password'}
+                value={passwordConfirmar}
+                onChange={(e) => setPasswordConfirmar(e.target.value)}
+                placeholder="Confirmar contraseña"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setMostrarPassword((prev) => !prev)}
+              >
+                {mostrarPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </label>
+
+          <button type="submit">Guardar contraseña</button>
+        </form>
+
+        {mensajePassword && <p className="success-msg">{mensajePassword}</p>}
+        {errorPassword && <p className="error-text">{errorPassword}</p>}
+      </section>
 
       <section className="panel section-block">
         <h2>Pedidos referidos</h2>

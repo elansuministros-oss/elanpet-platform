@@ -35,6 +35,14 @@ const [productoEditando, setProductoEditando] = useState(null);
   logo: '',
   activa: true,
 });
+const [nuevoUsuario, setNuevoUsuario] = useState({
+  nombre: '',
+  usuario: '',
+  email: '',
+  password: '',
+  rol: 'veterinaria',
+  veterinariaId: '',
+});
 const [busquedaVeterinaria, setBusquedaVeterinaria] = useState('');
 const [veterinariaEditando, setVeterinariaEditando] = useState(null);
 
@@ -73,6 +81,28 @@ const tabs = [
     crearCuentaBancaria(nuevaCuenta);
     setNuevaCuenta({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
   };
+  const agregarUsuario = (e) => {
+  e.preventDefault();
+
+  if (
+    !nuevoUsuario.nombre ||
+    !nuevoUsuario.usuario ||
+    !nuevoUsuario.password
+  ) {
+    return;
+  }
+
+  crearUsuario(nuevoUsuario);
+
+  setNuevoUsuario({
+    nombre: '',
+    usuario: '',
+    email: '',
+    password: '',
+    rol: 'veterinaria',
+    veterinariaId: '',
+  });
+};
 const agregarVeterinaria = (e) => {
   e.preventDefault();
 
@@ -646,6 +676,66 @@ const agregarVeterinaria = (e) => {
     <p className="note">
       Administración de accesos para administradores y veterinarias.
     </p>
+
+    <form className="form-grid" onSubmit={agregarUsuario}>
+      <input
+        placeholder="Nombre completo"
+        value={nuevoUsuario.nombre}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })
+        }
+      />
+
+      <input
+        placeholder="Usuario"
+        value={nuevoUsuario.usuario}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, usuario: e.target.value })
+        }
+      />
+
+      <input
+        placeholder="Correo"
+        value={nuevoUsuario.email}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, email: e.target.value })
+        }
+      />
+
+      <input
+        placeholder="Contraseña temporal"
+        value={nuevoUsuario.password}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })
+        }
+      />
+
+      <select
+        value={nuevoUsuario.rol}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })
+        }
+      >
+        <option value="veterinaria">Veterinaria</option>
+        <option value="admin">Administrador</option>
+      </select>
+
+      <select
+        value={nuevoUsuario.veterinariaId}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, veterinariaId: e.target.value })
+        }
+      >
+        <option value="">Sin veterinaria asignada</option>
+        {veterinarias.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.nombre}
+          </option>
+        ))}
+      </select>
+
+      <button type="submit">Crear usuario</button>
+    </form>
 
     <div className="admin-list">
       {usuarios.map((u) => {

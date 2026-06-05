@@ -81,51 +81,88 @@ const tabs = [
     crearCuentaBancaria(nuevaCuenta);
     setNuevaCuenta({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
   };
-  
-
-  const agregarUsuario = (e) => {
-  e.preventDefault();
-
-  const vetAsignada = veterinarias.find(
-    (v) => v.id === nuevoUsuario.veterinariaId
-  );
-
-  if (
-    !nuevoUsuario.usuario ||
-    (!nuevoUsuario.id && !nuevoUsuario.password) ||
-    (nuevoUsuario.rol === 'veterinaria' && !nuevoUsuario.veterinariaId)
-  ) {
-    return;
-  }
-
-  const datosUsuario = {
-    ...nuevoUsuario,
-    nombre:
-      nuevoUsuario.rol === 'veterinaria'
-        ? vetAsignada?.nombre || nuevoUsuario.usuario
-        : nuevoUsuario.nombre || nuevoUsuario.usuario,
+  const resetUsuario = () => {
+    setNuevoUsuario({
+      nombre: '',
+      usuario: '',
+      email: '',
+      password: '',
+      rol: 'veterinaria',
+      veterinariaId: '',
+    });
   };
 
-  if (!nuevoUsuario.password && nuevoUsuario.id) {
-    delete datosUsuario.password;
-  }
+  const agregarUsuario = (e) => {
+    e.preventDefault();
 
-  if (nuevoUsuario.id) {
-    actualizarUsuario(datosUsuario);
-  } else {
-    crearUsuario(datosUsuario);
-  }
+    const usuarioLimpio = String(nuevoUsuario.usuario || '').trim();
+    const passwordLimpio = String(nuevoUsuario.password || '').trim();
 
-  setNuevoUsuario({
-    nombre: '',
-    usuario: '',
-    email: '',
-    password: '',
-    rol: 'veterinaria',
-    veterinariaId: '',
-  });
-};
+    if (!usuarioLimpio) return;
 
+    if (!nuevoUsuario.id && !passwordLimpio) return;
+
+    if (nuevoUsuario.rol === 'veterinaria' && !nuevoUsuario.veterinariaId) {
+      return;
+    }
+
+    const vetAsignada = veterinarias.find(
+      (v) => v.id === nuevoUsuario.veterinariaId
+    );
+
+    const datosUsuario = {
+      ...nuevoUsuario,
+      usuario: usuarioLimpio,
+      email: String(nuevoUsuario.email || '').trim(),
+      nombre:
+        nuevoUsuario.nombre ||
+        (nuevoUsuario.rol === 'veterinaria'
+          ? vetAsignada?.nombre || usuarioLimpio
+          : usuarioLimpio),
+      veterinariaId:
+        nuevoUsuario.rol === 'veterinaria'
+          ? nuevoUsuario.veterinariaId
+          : '',
+      activo: nuevoUsuario.activo !== false,
+    };
+
+    if (!passwordLimpio && nuevoUsuario.id) {
+      delete datosUsuario.password;
+    }
+
+    if (nuevoUsuario.id) {
+      actualizarUsuario(datosUsuario);
+    } else {
+      crearUsuario(datosUsuario);
+    }
+
+    resetUsuario();
+  };
+
+  const editarUsuario = (u) => {
+    setNuevoUsuario({
+      ...u,
+      password: '',
+      veterinariaId: u.veterinariaId || '',
+      rol: u.rol || 'veterinaria',
+    });
+  };
+
+  const cambiarEstadoUsuario = (u) => {
+    actualizarUsuario({
+      ...u,
+      activo: !u.activo,
+    });
+  };
+
+  const desactivarUsuario = (u) => {
+    if (!window.confirm(`¿Desactivar el usuario ${u.usuario || u.email}?`)) return;
+
+    actualizarUsuario({
+      ...u,
+      activo: false,
+    });
+  };
 const agregarVeterinaria = (e) => {
   e.preventDefault();
 
@@ -734,6 +771,14 @@ const agregarVeterinaria = (e) => {
 
     <form className="form-grid" onSubmit={agregarUsuario}>
       <input
+        placeholder="Nombre completo"
+        value={nuevoUsuario.nombre}
+        onChange={(e) =>
+          setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })
+        }
+      />
+
+      <input
         placeholder="Usuario"
         value={nuevoUsuario.usuario}
         onChange={(e) =>
@@ -750,7 +795,12 @@ const agregarVeterinaria = (e) => {
       />
 
       <input
-        placeholder="Contraseña temporal"
+        type="password"
+        placeholder={
+          nuevoUsuario.id
+            ? 'Nueva contraseña opcional'
+            : 'Contraseña temporal'
+        }
         value={nuevoUsuario.password}
         onChange={(e) =>
           setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })
@@ -758,20 +808,48 @@ const agregarVeterinaria = (e) => {
       />
 
       <select
-        value={nuevoUsuario.veterinariaId}
+        value={nuevoUsuario.rol}
         onChange={(e) =>
-          setNuevoUsuario({ ...nuevoUsuario, veterinariaId: e.target.value })
+          setNuevoUsuario({
+            ...nuevoUsuario,
+            rol: e.target.value,
+            veterinariaId:
+              e.target.value === 'admin' ? '' : nuevoUsuario.veterinariaId,
+          })
         }
       >
-        <option value="">Sin veterinaria asignada</option>
-        {veterinarias.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.nombre}
-          </option>
-        ))}
+        <option value="veterinaria">Veterinaria</option>
+        <option value="admin">Administrador</option>
       </select>
 
-      <button type="submit">Crear usuario</button>
+      {nuevoUsuario.rol === 'veterinaria' && (
+        <select
+          value={nuevoUsuario.veterinariaId}
+          onChange={(e) =>
+            setNuevoUsuario({
+              ...nuevoUsuario,
+              veterinariaId: e.target.value,
+            })
+          }
+        >
+          <option value="">Seleccionar veterinaria existente</option>
+          {veterinarias.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.nombre}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <button type="submit">
+        {nuevoUsuario.id ? 'Actualizar usuario' : 'Crear usuario'}
+      </button>
+
+      {nuevoUsuario.id && (
+        <button type="button" className="btn-outline" onClick={resetUsuario}>
+          Cancelar edición
+        </button>
+      )}
     </form>
 
     <div className="admin-list">
@@ -783,13 +861,40 @@ const agregarVeterinaria = (e) => {
         return (
           <article key={u.id} className="admin-row no-image">
             <div>
-              <b>{u.nombre}</b>
-              <span>Usuario: {u.usuario || u.email}</span>
-              <span>Rol: {u.rol}</span>
+              <b>{u.nombre || u.usuario || u.email}</b>
+              <span>Usuario: {u.usuario || 'No definido'}</span>
+              <span>Correo: {u.email || 'No definido'}</span>
+              <span>Rol: {u.rol === 'admin' ? 'Administrador' : 'Veterinaria'}</span>
               <span>
                 Veterinaria: {vetAsignada?.nombre || 'No asignada'}
               </span>
-              <span>Estado: {u.activo ? 'Activo' : 'Inactivo'}</span>
+              <span>Estado: {u.activo === false ? 'Inactivo' : 'Activo'}</span>
+            </div>
+
+            <div className="actions">
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => editarUsuario(u)}
+              >
+                Editar
+              </button>
+
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => cambiarEstadoUsuario(u)}
+              >
+                {u.activo === false ? 'Activar' : 'Desactivar'}
+              </button>
+
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => desactivarUsuario(u)}
+              >
+                Eliminar
+              </button>
             </div>
           </article>
         );

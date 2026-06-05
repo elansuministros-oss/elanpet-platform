@@ -44,7 +44,24 @@ const trabajosIniciales = [
 
 const veterinariasIniciales = [];
 
-const usuariosIniciales = [];
+const usuariosIniciales = [
+  {
+    id: 'admin-1',
+    usuario: 'admin',
+    email: 'elansuministros@gmail.com',
+    password: 'ElanAdmin2026#Seguro',
+    rol: 'admin',
+    activo: true,
+  },
+  {
+    id: 'prod-1',
+    usuario: 'produccion',
+    email: 'produccion@elanpet.com',
+    password: 'ProdElan2026#Seguro',
+    rol: 'produccion',
+    activo: true,
+  },
+];
 
 export const estadosProduccion = ['pendiente', 'diseno', 'produccion', 'control_calidad', 'listo', 'entregado'];
 

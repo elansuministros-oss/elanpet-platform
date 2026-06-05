@@ -81,18 +81,40 @@ const tabs = [
     crearCuentaBancaria(nuevaCuenta);
     setNuevaCuenta({ banco: '', titular: '', numero: '', moneda: 'Córdobas' });
   };
+  
+
   const agregarUsuario = (e) => {
   e.preventDefault();
 
+  const vetAsignada = veterinarias.find(
+    (v) => v.id === nuevoUsuario.veterinariaId
+  );
+
   if (
-    !nuevoUsuario.nombre ||
     !nuevoUsuario.usuario ||
-    !nuevoUsuario.password
+    (!nuevoUsuario.id && !nuevoUsuario.password) ||
+    (nuevoUsuario.rol === 'veterinaria' && !nuevoUsuario.veterinariaId)
   ) {
     return;
   }
 
-  crearUsuario(nuevoUsuario);
+  const datosUsuario = {
+    ...nuevoUsuario,
+    nombre:
+      nuevoUsuario.rol === 'veterinaria'
+        ? vetAsignada?.nombre || nuevoUsuario.usuario
+        : nuevoUsuario.nombre || nuevoUsuario.usuario,
+  };
+
+  if (!nuevoUsuario.password && nuevoUsuario.id) {
+    delete datosUsuario.password;
+  }
+
+  if (nuevoUsuario.id) {
+    actualizarUsuario(datosUsuario);
+  } else {
+    crearUsuario(datosUsuario);
+  }
 
   setNuevoUsuario({
     nombre: '',
@@ -103,6 +125,7 @@ const tabs = [
     veterinariaId: '',
   });
 };
+
 const agregarVeterinaria = (e) => {
   e.preventDefault();
 
@@ -387,7 +410,39 @@ const agregarVeterinaria = (e) => {
           <select value={nuevoBanner.link} onChange={(e) => setNuevoBanner({ ...nuevoBanner, link: e.target.value })}><option value="catalogo">Catálogo</option><option value="contacto">Contacto</option><option value="home">Inicio</option></select>
           <button><ImagePlus size={18} /> Crear banner</button>
         </form>
-        <div className="admin-list">{banners.map((b) => <article key={b.id} className="admin-row no-image"><div><b>{b.titulo}</b><span>{b.subtitulo}</span></div><strong>{b.ubicacion}</strong><label className="switch-row"><input type="checkbox" checked={b.activo} onChange={(e) => actualizarBanner({ ...b, activo: e.target.checked })} /> Activo</label></article>)}</div>
+        <div className="admin-list">{banners.map((b) =>
+           <article key={u.id} className="admin-row no-image">
+  <div>
+    <b>{u.nombre}</b>
+    <span>Usuario: {u.usuario || u.email}</span>
+    <span>Rol: {u.rol}</span>
+    <span>
+      Veterinaria: {vetAsignada?.nombre || 'No asignada'}
+    </span>
+    <span>Estado: {u.activo ? 'Activo' : 'Inactivo'}</span>
+  </div>
+
+  <button
+    type="button"
+    className="btn-outline"
+    onClick={() =>
+      setNuevoUsuario({
+        id: u.id,
+        nombre: u.nombre || '',
+        usuario: u.usuario || '',
+        email: u.email || '',
+        password: '',
+        rol: u.rol || 'veterinaria',
+        veterinariaId: u.veterinariaId || '',
+        activo: u.activo !== false,
+      })
+    }
+  >
+    Editar
+  </button>
+</article>
+)}
+</div>
       </section>}
 
       {tab === 'trabajos' && <section className="panel">

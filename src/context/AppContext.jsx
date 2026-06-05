@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { productosIniciales, veterinariaDemo } from '../data/productos';
+import { productosIniciales } from '../data/productos';
 import { resumenCarrito } from '../lib/calculos';
 import { supabase } from '../lib/supabase';
 
@@ -42,16 +42,9 @@ const trabajosIniciales = [
   { id: 'trabajo-3', titulo: 'Torre para gatos', tipo: 'Foto', descripcion: 'Mueble vertical para descanso, juego y rascado.', imagen: '/productos/producto-10.jpg', activo: true },
 ];
 
-const veterinariasIniciales = [
-  { ...veterinariaDemo, id: 'vet001', codigo: 'VET001', slug: 'veterinaria-demo', telefono: '', whatsapp: '', email: '', direccion: 'Managua, Nicaragua', responsable: 'Responsable Demo', comisionPorcentaje: 10, linkAfiliado: '/?vet=veterinaria-demo', activa: true, escaneos: 0, pedidos: 0, ventas: 0, comision: 0 },
-  { id: 'vet002', codigo: 'VET002', nombre: 'Veterinaria Animal Care', slug: 'animal-care', telefono: '+505 7777 7777', whatsapp: '+505 7777 7777', email: '', direccion: 'Managua, Nicaragua', responsable: 'Responsable Animal Care', comisionPorcentaje: 10, linkAfiliado: '/?vet=animal-care', activa: true, escaneos: 0, pedidos: 0, ventas: 0, comision: 0 },
-];
+const veterinariasIniciales = [];
 
-const usuariosIniciales = [
-  { id: 'user-admin', nombre: 'Erick Cano', usuario: 'admin', email: 'elansuministros@gmail.com', password: '123456', rol: 'admin', veterinariaId: '', activo: true, debeCambiarPassword: false, creadoEn: new Date().toISOString() },
-  { id: 'user-vet-demo', nombre: 'Veterinaria Demo', usuario: 'vetdemo', email: 'vet@elanpet.com', password: '123456', rol: 'veterinaria', veterinariaId: 'vet001', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
-  { id: 'user-produccion-demo', nombre: 'Producción ELANPET', usuario: 'produccion', email: 'produccion@elanpet.com', password: '123456', rol: 'produccion', veterinariaId: '', activo: true, debeCambiarPassword: true, creadoEn: new Date().toISOString() },
-];
+const usuariosIniciales = [];
 
 export const estadosProduccion = ['pendiente', 'diseno', 'produccion', 'control_calidad', 'listo', 'entregado'];
 
@@ -195,7 +188,7 @@ export function AppProvider({ children }) {
   const [productos, setProductos] = useState(() => leerStorage('elanpet_productos', productosIniciales));
   const [imagenes, setImagenes] = useState(() => leerStorage('elanpet_imagenes', []));
   const [veterinarias, setVeterinarias] = useState(() => leerStorage('elanpet_veterinarias', veterinariasIniciales));
-  const [veterinaria, setVeterinaria] = useState(() => leerStorage('elanpet_veterinaria_actual', veterinariaDemo));
+  const [veterinaria, setVeterinaria] = useState(() => leerStorage('elanpet_veterinaria_actual', null));
   const [carrito, setCarrito] = useState([]);
   const [pedidos, setPedidos] = useState(() => leerStorage('elanpet_pedidos', []));
   const [usuario, setUsuario] = useState(() => leerStorage('elanpet_usuario_actual', null));
@@ -219,6 +212,7 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     if (veterinaria) guardarStorage('elanpet_veterinaria_actual', veterinaria);
+    else localStorage.removeItem('elanpet_veterinaria_actual');
   }, [veterinaria]);
 
   useEffect(() => {
@@ -249,60 +243,18 @@ export function AppProvider({ children }) {
 
         let users = (usersData || []).map(mapUsuarioFromDb);
 
-        if (vets.length === 0) {
-          const vetsParaCrear = veterinariasIniciales.map((v, index) => ({
-            ...mapVeterinariaToDb(v),
-            codigo: v.codigo || `VET${String(index + 1).padStart(3, '0')}`,
-          }));
-
-          const { data: vetsCreadas, error: crearVetsError } = await supabase
-            .from('veterinarias')
-            .insert(vetsParaCrear)
-            .select('*');
-
-          if (crearVetsError) throw crearVetsError;
-          vets = (vetsCreadas || []).map(mapVeterinariaFromDb);
-        }
-
-        if (users.length === 0) {
-          const vetDemo = vets.find((v) => v.codigo === 'VET001') || vets[0];
-
-          const usuariosParaCrear = [
-            mapUsuarioToDb({
-              ...usuariosIniciales[0],
-              veterinariaId: '',
-            }),
-          ];
-
-          if (vetDemo?.id) {
-            usuariosParaCrear.push(
-              mapUsuarioToDb({
-                ...usuariosIniciales[1],
-                veterinariaId: vetDemo.id,
-              })
-            );
-          }
-
-          usuariosParaCrear.push(
-            mapUsuarioToDb({
-              ...usuariosIniciales[2],
-              veterinariaId: '',
-            })
-          );
-
-          const { data: usuariosCreados, error: crearUsersError } = await supabase
-            .from('usuarios')
-            .insert(usuariosParaCrear)
-            .select('*');
-
-          if (crearUsersError) throw crearUsersError;
-          users = (usuariosCreados || []).map(mapUsuarioFromDb);
-        }
-
         if (!activo) return;
 
         setVeterinarias(vets);
         setUsuarios(users);
+
+        const veterinariaActual = leerStorage('elanpet_veterinaria_actual', null);
+        if (veterinariaActual?.id) {
+          const veterinariaSincronizada = vets.find((v) => v.id === veterinariaActual.id || v.codigo === veterinariaActual.codigo);
+          setVeterinaria(veterinariaSincronizada || null);
+        } else if (vets.length === 0) {
+          setVeterinaria(null);
+        }
 
         const usuarioActual = leerStorage('elanpet_usuario_actual', null);
         if (usuarioActual?.id) {
@@ -561,12 +513,7 @@ export function AppProvider({ children }) {
   };
 
   const login = ({ email, password }) => {
-    console.log('LOGIN', {
-  email,
-  password,
-  usuarios,
-  supabaseListo
-});
+
     const acceso = normalizarUsuario(email);
     const clave = String(password || '').trim();
 

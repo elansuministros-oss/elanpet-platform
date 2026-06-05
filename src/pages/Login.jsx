@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Login({ setPage, destino }) {
@@ -59,7 +59,7 @@ export default function Login({ setPage, destino }) {
               aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
-              {mostrarPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              {mostrarPassword ? 'OCULTAR' : 'VER'}
             </button>
           </div>
 

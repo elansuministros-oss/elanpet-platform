@@ -237,7 +237,7 @@ export default function AdminPanel() {
     etiquetasEstado[pedido?.estadoProduccion] || etiquetasEstado[pedido?.estado] || pedido?.estadoProduccion || pedido?.estado || 'Sin estado';
 
   function mensajeSeguimiento(pedido, codigo) {
-    return `Hola ${pedido.cliente?.nombre}.\n\nConfirmamos la recepción de tu ${pedido.pagoTipo === 'total' ? 'pago total' : 'anticipo'}.\n\nTu pedido ya fue ingresado a producción.\n\nCódigo de seguimiento:\n${codigo}\n\nConsulta el avance en:\nhttps://elanpet.com/seguimiento\n\nGracias por confiar en ELAN PET.`;
+    return `Hola ${pedido.cliente?.nombre}.\n\nConfirmamos la recepción de tu ${pedido.pagoTipo === 'total' ? 'pago total' : 'anticipo'}.\n\nTu pedido ya fue ingresado a producción.\n\nCódigo de seguimiento:\n${codigo}\n\nConsulta el avance en:\nhttps://pet.elankav.com/seguimiento\n\nGracias por confiar en ELAN PET.`;
   }
 
   function confirmarYPedirSeguimiento(pedido) {
@@ -251,7 +251,7 @@ export default function AdminPanel() {
       <div className="admin-head">
         <div>
           <span className="badge">Acceso administrador</span>
-          <h1>Panel Maestro ELANPET</h1>
+          <h1>Panel Maestro ELAN PET</h1>
         </div>
         <div className="admin-tabs">
           {tabs.map((t) => (
@@ -425,7 +425,7 @@ export default function AdminPanel() {
         <section className="panel">
           <h2>Pedidos / clientes potenciales</h2>
           <p className="note">Aquí aparecen los clientes que presionaron “Enviar pedido”. Si no depositan, se les puede dar seguimiento.</p>
-          {pedidos.length === 0 ? <p>No hay pedidos registrados todavía.</p> : <div className="admin-list">{pedidos.map((p) => <article key={p.id} className="admin-row no-image"><div><b>{p.numero} · {p.cliente?.nombre}</b><span>{p.cliente?.whatsapp} · {p.veterinaria?.nombre} · {etiquetasEstado[p.estado] || p.estado}</span><span>Monto solicitado: {formatoC$(p.montoSolicitado || 0)} · Saldo: {formatoC$(p.saldoPendiente || 0)}</span></div><strong>{formatoC$(p.resumen?.total || 0)}</strong>{p.estado === 'pendiente_pago' ? <button className="btn-outline" onClick={() => confirmarYPedirSeguimiento(p)}>Confirmar pago</button> : <span className="badge">{p.codigoSeguimiento}</span>}</article>)}</div>}
+          {pedidos.filter((p) => !['entregado', 'finalizado', 'cancelado'].includes(p.estado) && p.estadoProduccion !== 'entregado').length === 0 ? <p>No hay pedidos activos registrados.</p> : <div className="admin-list">{pedidos.filter((p) => !['entregado', 'finalizado', 'cancelado'].includes(p.estado) && p.estadoProduccion !== 'entregado').map((p) => <article key={p.id} className="admin-row no-image"><div><b>{p.numero} · {p.cliente?.nombre}</b><span>{p.cliente?.whatsapp} · {p.veterinaria?.nombre || 'Venta directa'} · {etiquetasEstado[p.estado] || p.estado}</span><span>Monto solicitado: {formatoC$(p.montoSolicitado || 0)} · Saldo: {formatoC$(p.saldoPendiente || 0)}</span></div><strong>{formatoC$(p.resumen?.total || 0)}</strong>{p.estado === 'pendiente_pago' ? <button className="btn-outline" onClick={() => confirmarYPedirSeguimiento(p)}>Validar pago y enviar a producción</button> : <span className="badge">{p.codigoSeguimiento}</span>}</article>)}</div>}
         </section>
       )}
 
@@ -470,8 +470,8 @@ export default function AdminPanel() {
                 const comisionPagada = comisionesPagadas.reduce((a, p) => a + calcularComisionPedido(p), 0);
                 const comisionVeterinaria = comisionPendiente + comisionPagada;
                 const mostrarDetalle = veterinariaDetalleId === v.id;
-                const linkBase = typeof window !== 'undefined' ? window.location.origin : '';
-                const linkAfiliado = v.linkAfiliado?.startsWith('http') ? v.linkAfiliado : `${linkBase}${v.linkAfiliado || `/?vet=${v.slug || v.codigo}`}`;
+                const linkBase = 'https://pet.elankav.com';
+                const linkAfiliado = `${linkBase}/v/${v.codigo || v.slug}`;
                 return (
                   <article key={v.id} className="admin-row no-image vet-card">
                     <div className="vet-info">

@@ -6,12 +6,12 @@ import { supabase } from '../lib/supabase';
 const AppContext = createContext(null);
 
 const configuracionInicial = {
-  nombreSitio: 'ELANPET.COM',
+  nombreSitio: 'ELAN PET',
   slogan: 'Muebles funcionales para mascotas felices',
-  logoTexto: 'ELANPET.COM',
+  logoTexto: 'ELAN PET',
   logo: '',
   whatsapp: '+505 8888 8888',
-  correo: 'ventas@elanpet.com',
+  correo: 'elansuministros@gmail.com',
   instagram: '@elanpet',
   colorPrincipal: '#1E5AA8',
   colorSecundario: '#058B8C',
@@ -102,6 +102,14 @@ function normalizarUsuario(texto) {
   return String(texto || '').toLowerCase().trim();
 }
 
+function normalizarWhatsAppNicaragua(numero) {
+  const limpio = String(numero || '').replace(/[^0-9]/g, '');
+  if (!limpio) return '';
+  if (limpio.length === 8) return `505${limpio}`;
+  if (limpio.startsWith('505') && limpio.length === 11) return limpio;
+  return limpio;
+}
+
 function mapVeterinariaFromDb(row) {
   return {
     id: row.id,
@@ -115,7 +123,7 @@ function mapVeterinariaFromDb(row) {
     responsable: row.responsable || '',
     logo: row.logo || '',
     comisionPorcentaje: Number(row.comision_porcentaje ?? 10),
-    linkAfiliado: row.link_afiliado || `/?vet=${row.slug || crearSlug(row.nombre || row.codigo || row.id)}`,
+    linkAfiliado: row.link_afiliado || `/v/${row.codigo || row.slug || crearSlug(row.nombre || row.id)}`,
     activa: row.activa !== false,
     escaneos: Number(row.escaneos || 0),
     pedidos: Number(row.pedidos || 0),
@@ -139,7 +147,7 @@ function mapVeterinariaToDb(vet) {
     responsable: vet.responsable || '',
     logo: vet.logo || '',
     comision_porcentaje: Number(vet.comisionPorcentaje ?? vet.comision_porcentaje ?? 10),
-    link_afiliado: vet.linkAfiliado || `/?vet=${slug}`,
+    link_afiliado: vet.linkAfiliado || `/v/${vet.codigo || slug}`,
     activa: vet.activa !== false,
     escaneos: Number(vet.escaneos || 0),
     pedidos: Number(vet.pedidos || 0),
@@ -302,7 +310,7 @@ export function AppProvider({ children }) {
       responsable: datos.responsable || '',
       logo: datos.logo || '',
       comisionPorcentaje: Number(datos.comisionPorcentaje || 10),
-      linkAfiliado: `/?vet=${slug}`,
+      linkAfiliado: `/v/${codigo}`,
       activa: datos.activa !== false,
       escaneos: 0,
       pedidos: 0,
@@ -336,7 +344,7 @@ export function AppProvider({ children }) {
 
   const actualizarVeterinaria = (datosVeterinaria) => {
     const slug = datosVeterinaria.slug || crearSlug(datosVeterinaria.nombre);
-    const actualizada = { ...datosVeterinaria, slug, linkAfiliado: `/?vet=${slug}` };
+    const actualizada = { ...datosVeterinaria, slug, linkAfiliado: `/v/${datosVeterinaria.codigo || slug}` };
 
     setVeterinarias((prev) => prev.map((v) => (v.id === actualizada.id ? { ...v, ...actualizada } : v)));
     if (veterinaria?.id === actualizada.id) setVeterinaria((prev) => ({ ...prev, ...actualizada }));
@@ -387,6 +395,11 @@ export function AppProvider({ children }) {
   const resumen = useMemo(() => resumenCarrito(carrito), [carrito]);
 
   const crearPedidoTransferencia = ({ cliente, pagoTipo = 'anticipo' }) => {
+    const clienteNormalizado = {
+      ...cliente,
+      whatsapp: normalizarWhatsAppNicaragua(cliente?.whatsapp || cliente?.telefono),
+      telefono: normalizarWhatsAppNicaragua(cliente?.telefono || cliente?.whatsapp),
+    };
     const numero = `PED-${String(Date.now()).slice(-6)}`;
     const anticipoPorcentaje = Number(configuracion.anticipoPorcentaje || 60);
     const montoSolicitado = pagoTipo === 'total' ? resumen.total : resumen.total * (anticipoPorcentaje / 100);
@@ -394,8 +407,8 @@ export function AppProvider({ children }) {
       id: `pedido-${Date.now()}`,
       numero,
       codigoSeguimiento: '',
-      cliente,
-      veterinaria,
+      cliente: clienteNormalizado,
+      veterinaria: veterinaria ? { ...veterinaria, linkAfiliado: `/v/${veterinaria.codigo || veterinaria.slug}` } : null,
       items: carrito,
       resumen,
       pagoTipo,

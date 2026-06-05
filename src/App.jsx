@@ -16,7 +16,7 @@ import './styles/global.css';
 
 export default function App() {
   const [page, setPage] = useState('home');
-  const { usuario, configuracion } = useApp();
+  const { usuario, configuracion, veterinarias, setVeterinaria } = useApp();
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -29,6 +29,24 @@ export default function App() {
       configuracion.colorSecundario || '#058B8C'
     );
   }, [configuracion]);
+
+
+  useEffect(() => {
+    const path = window.location.pathname || '/';
+    const matchVet = path.match(/^\/v\/([^/]+)/i);
+
+    if (matchVet && veterinarias?.length) {
+      const codigo = decodeURIComponent(matchVet[1]).trim().toLowerCase();
+      const vet = veterinarias.find(
+        (v) => String(v.codigo || '').toLowerCase() === codigo || String(v.slug || '').toLowerCase() === codigo
+      );
+
+      if (vet) {
+        setVeterinaria(vet);
+        setPage('catalogo');
+      }
+    }
+  }, [veterinarias, setVeterinaria]);
 
   const ir = (destino) => setPage(destino);
 

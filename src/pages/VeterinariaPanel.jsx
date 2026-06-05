@@ -74,7 +74,7 @@ export default function VeterinariaPanel() {
     setMensajePassword('Contraseña actualizada correctamente.');
   };
 
-  const url = `https://elanpet.com/v/${veterinaria.codigo}`;
+  const url = `https://pet.elankav.com/v/${veterinaria.codigo}`;
   const misPedidos = pedidos.filter((p) => p.veterinaria?.id === veterinaria.id);
   const entregados = misPedidos.filter((p) => p.estado === 'entregado');
 

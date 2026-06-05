@@ -42,7 +42,9 @@ const [nuevoUsuario, setNuevoUsuario] = useState({
   password: '',
   rol: 'veterinaria',
   veterinariaId: '',
+  activo: true,
 });
+const [mostrarPasswordUsuario, setMostrarPasswordUsuario] = useState(false);
 const [busquedaVeterinaria, setBusquedaVeterinaria] = useState('');
 const [veterinariaEditando, setVeterinariaEditando] = useState(null);
 
@@ -89,20 +91,31 @@ const tabs = [
       password: '',
       rol: 'veterinaria',
       veterinariaId: '',
+      activo: true,
     });
+    setMostrarPasswordUsuario(false);
   };
 
   const agregarUsuario = (e) => {
     e.preventDefault();
 
-    const usuarioLimpio = String(nuevoUsuario.usuario || '').trim();
+    const usuarioLimpio = String(nuevoUsuario.usuario || '').trim().toLowerCase();
+    const emailLimpio = String(nuevoUsuario.email || '').trim().toLowerCase();
     const passwordLimpio = String(nuevoUsuario.password || '').trim();
+    const rol = nuevoUsuario.rol || 'veterinaria';
 
-    if (!usuarioLimpio) return;
+    if (!usuarioLimpio) {
+      alert('Debés escribir un nombre de usuario.');
+      return;
+    }
 
-    if (!nuevoUsuario.id && !passwordLimpio) return;
+    if (!nuevoUsuario.id && !passwordLimpio) {
+      alert('Debés escribir una contraseña para el usuario nuevo.');
+      return;
+    }
 
-    if (nuevoUsuario.rol === 'veterinaria' && !nuevoUsuario.veterinariaId) {
+    if (rol === 'veterinaria' && !nuevoUsuario.veterinariaId) {
+      alert('Debés asignar una veterinaria a este usuario.');
       return;
     }
 
@@ -112,19 +125,21 @@ const tabs = [
 
     const datosUsuario = {
       ...nuevoUsuario,
-      usuario: usuarioLimpio,
-      email: String(nuevoUsuario.email || '').trim(),
       nombre:
         nuevoUsuario.nombre ||
-        (nuevoUsuario.rol === 'veterinaria'
+        (rol === 'veterinaria'
           ? vetAsignada?.nombre || usuarioLimpio
           : usuarioLimpio),
-      veterinariaId:
-        nuevoUsuario.rol === 'veterinaria'
-          ? nuevoUsuario.veterinariaId
-          : '',
+      usuario: usuarioLimpio,
+      email: emailLimpio,
+      rol,
+      veterinariaId: rol === 'veterinaria' ? nuevoUsuario.veterinariaId : '',
       activo: nuevoUsuario.activo !== false,
     };
+
+    if (passwordLimpio) {
+      datosUsuario.password = passwordLimpio;
+    }
 
     if (!passwordLimpio && nuevoUsuario.id) {
       delete datosUsuario.password;
@@ -145,7 +160,10 @@ const tabs = [
       password: '',
       veterinariaId: u.veterinariaId || '',
       rol: u.rol || 'veterinaria',
+      activo: u.activo !== false,
     });
+    setTab('usuarios');
+    setMostrarPasswordUsuario(false);
   };
 
   const cambiarEstadoUsuario = (u) => {
@@ -153,6 +171,24 @@ const tabs = [
       ...u,
       activo: !u.activo,
     });
+  };
+
+  const resetearPasswordUsuario = (u) => {
+    const passwordTemporal = window.prompt(
+      `Nueva contraseña para ${u.usuario || u.email}:`,
+      '123456'
+    );
+
+    if (!passwordTemporal) return;
+
+    actualizarUsuario({
+      ...u,
+      password: passwordTemporal,
+      debeCambiarPassword: true,
+      activo: u.activo !== false,
+    });
+
+    alert(`Contraseña actualizada para ${u.usuario || u.email}.`);
   };
 
   const desactivarUsuario = (u) => {
@@ -766,13 +802,13 @@ const agregarVeterinaria = (e) => {
   <section className="panel">
     <h2>Usuarios</h2>
     <p className="note">
-      Administración de accesos para administradores y veterinarias.
+      Administración de accesos para administradores y veterinarias. Desde aquí podés crear usuarios, asignar veterinarias, editar datos y restablecer contraseñas.
     </p>
 
     <form className="form-grid" onSubmit={agregarUsuario}>
       <input
         placeholder="Nombre completo"
-        value={nuevoUsuario.nombre}
+        value={nuevoUsuario.nombre || ''}
         onChange={(e) =>
           setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })
         }
@@ -780,7 +816,7 @@ const agregarVeterinaria = (e) => {
 
       <input
         placeholder="Usuario"
-        value={nuevoUsuario.usuario}
+        value={nuevoUsuario.usuario || ''}
         onChange={(e) =>
           setNuevoUsuario({ ...nuevoUsuario, usuario: e.target.value })
         }
@@ -788,33 +824,38 @@ const agregarVeterinaria = (e) => {
 
       <input
         placeholder="Correo"
-        value={nuevoUsuario.email}
+        value={nuevoUsuario.email || ''}
         onChange={(e) =>
           setNuevoUsuario({ ...nuevoUsuario, email: e.target.value })
         }
       />
 
-      <input
-        type="password"
-        placeholder={
-          nuevoUsuario.id
-            ? 'Nueva contraseña opcional'
-            : 'Contraseña temporal'
-        }
-        value={nuevoUsuario.password}
-        onChange={(e) =>
-          setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })
-        }
-      />
+      <div className="password-field">
+        <input
+          type={mostrarPasswordUsuario ? 'text' : 'password'}
+          placeholder={nuevoUsuario.id ? 'Nueva contraseña opcional' : 'Contraseña temporal'}
+          value={nuevoUsuario.password || ''}
+          onChange={(e) =>
+            setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })
+          }
+          autoComplete="new-password"
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          onClick={() => setMostrarPasswordUsuario((prev) => !prev)}
+        >
+          {mostrarPasswordUsuario ? 'OCULTAR' : 'VER'}
+        </button>
+      </div>
 
       <select
-        value={nuevoUsuario.rol}
+        value={nuevoUsuario.rol || 'veterinaria'}
         onChange={(e) =>
           setNuevoUsuario({
             ...nuevoUsuario,
             rol: e.target.value,
-            veterinariaId:
-              e.target.value === 'admin' ? '' : nuevoUsuario.veterinariaId,
+            veterinariaId: e.target.value === 'admin' ? '' : nuevoUsuario.veterinariaId,
           })
         }
       >
@@ -822,14 +863,11 @@ const agregarVeterinaria = (e) => {
         <option value="admin">Administrador</option>
       </select>
 
-      {nuevoUsuario.rol === 'veterinaria' && (
+      {(nuevoUsuario.rol || 'veterinaria') === 'veterinaria' && (
         <select
-          value={nuevoUsuario.veterinariaId}
+          value={nuevoUsuario.veterinariaId || ''}
           onChange={(e) =>
-            setNuevoUsuario({
-              ...nuevoUsuario,
-              veterinariaId: e.target.value,
-            })
+            setNuevoUsuario({ ...nuevoUsuario, veterinariaId: e.target.value })
           }
         >
           <option value="">Seleccionar veterinaria existente</option>
@@ -860,15 +898,16 @@ const agregarVeterinaria = (e) => {
 
         return (
           <article key={u.id} className="admin-row no-image">
-            <div>
+            <div style={{ display: 'grid', gap: '4px' }}>
               <b>{u.nombre || u.usuario || u.email}</b>
-              <span>Usuario: {u.usuario || 'No definido'}</span>
-              <span>Correo: {u.email || 'No definido'}</span>
+              <span>Usuario: {u.usuario || 'Sin usuario'}</span>
+              <span>Correo: {u.email || 'Sin correo'}</span>
               <span>Rol: {u.rol === 'admin' ? 'Administrador' : 'Veterinaria'}</span>
               <span>
-                Veterinaria: {vetAsignada?.nombre || 'No asignada'}
+                Veterinaria: {u.rol === 'veterinaria' ? vetAsignada?.nombre || 'No asignada' : 'No aplica'}
               </span>
-              <span>Estado: {u.activo === false ? 'Inactivo' : 'Activo'}</span>
+              <span>Estado: {u.activo !== false ? 'Activo' : 'Inactivo'}</span>
+              <span>Contraseña: protegida</span>
             </div>
 
             <div className="actions">
@@ -883,9 +922,17 @@ const agregarVeterinaria = (e) => {
               <button
                 type="button"
                 className="btn-outline"
+                onClick={() => resetearPasswordUsuario(u)}
+              >
+                Resetear contraseña
+              </button>
+
+              <button
+                type="button"
+                className="btn-outline"
                 onClick={() => cambiarEstadoUsuario(u)}
               >
-                {u.activo === false ? 'Activar' : 'Desactivar'}
+                {u.activo !== false ? 'Desactivar' : 'Activar'}
               </button>
 
               <button

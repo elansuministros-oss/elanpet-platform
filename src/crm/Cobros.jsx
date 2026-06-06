@@ -78,11 +78,9 @@ export default function Cobros() {
     };
 
     if (editandoId) {
-      setCobros((prev) =>
-        prev.map((item) => (item.id === editandoId ? datos : item))
-      );
+      actualizarCobro(datos);
     } else {
-      setCobros((prev) => [datos, ...prev]);
+      crearCobro(datos);
     }
 
     limpiar();
@@ -107,7 +105,7 @@ export default function Cobros() {
   };
 
   const eliminar = (id) => {
-    setCobros((prev) => prev.filter((item) => item.id !== id));
+    eliminarCobro(id);
 
     if (editandoId === id) limpiar();
   };

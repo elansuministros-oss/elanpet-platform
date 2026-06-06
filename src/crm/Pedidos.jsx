@@ -1,8 +1,32 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
+const fechaActual = () => new Date().toISOString().slice(0, 10);
+
+const formInicial = () => ({
+  codigo: '',
+  cotizacionId: '',
+  cotizacionCodigo: '',
+  empresaId: '',
+  empresaNombre: '',
+  contactoId: '',
+  contactoNombre: '',
+  cliente: '',
+  telefono: '',
+  producto: '',
+  cantidad: '',
+  total: '',
+  anticipo: '',
+  estado: 'Pendiente',
+  fecha: fechaActual(),
+  observaciones: '',
+});
+
 export default function Pedidos() {
   const {
+    empresas,
+    contactos,
+    cotizaciones,
     pedidos,
     crearPedido,
     actualizarPedido,
@@ -10,49 +34,128 @@ export default function Pedidos() {
   } = useCore();
 
   const [editandoId, setEditandoId] = useState(null);
+  const [form, setForm] = useState(formInicial());
 
-  const [form, setForm] = useState({
-    codigo: '',
-    cliente: '',
-    telefono: '',
-    producto: '',
-    cantidad: '',
-    total: '',
-    anticipo: '',
-    estado: 'Pendiente',
-    fecha: new Date().toISOString().slice(0, 10),
-    observaciones: '',
-  });
+  const cotizacionesDisponibles = useMemo(() => {
+    return cotizaciones.filter((cotizacion) => {
+      const estado = cotizacion.estado || '';
+      return estado !== 'Cancelada' && estado !== 'Rechazada' && estado !== 'Anulada';
+    });
+  }, [cotizaciones]);
+
+  const obtenerEmpresaNombre = (item) => {
+    if (item.empresaNombre) return item.empresaNombre;
+    if (item.empresa) return item.empresa;
+    if (item.cliente) return item.cliente;
+
+    const empresa = empresas.find((empresaItem) => empresaItem.id === item.empresaId);
+    return empresa?.nombre || '';
+  };
+
+  const obtenerContactoNombre = (item) => {
+    if (item.contactoNombre) return item.contactoNombre;
+    if (item.contacto) return item.contacto;
+
+    const contacto = contactos.find(
+      (contactoItem) => contactoItem.id === item.contactoId
+    );
+
+    return contacto?.nombre || '';
+  };
+
+  const obtenerTelefonoContacto = (contactoId) => {
+    const contacto = contactos.find((item) => item.id === contactoId);
+    return contacto?.whatsapp || contacto?.telefono || '';
+  };
 
   const cambiar = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+
+    setForm((prev) => {
+      if (name === 'cotizacionId') {
+        const cotizacionSeleccionada = cotizaciones.find(
+          (cotizacion) => cotizacion.id === value
+        );
+
+        if (!cotizacionSeleccionada) {
+          return {
+            ...prev,
+            cotizacionId: '',
+            cotizacionCodigo: '',
+            empresaId: '',
+            empresaNombre: '',
+            contactoId: '',
+            contactoNombre: '',
+            cliente: '',
+            telefono: '',
+            producto: '',
+            total: '',
+            observaciones: prev.observaciones,
+          };
+        }
+
+        const empresaNombre = obtenerEmpresaNombre(cotizacionSeleccionada);
+        const contactoNombre = obtenerContactoNombre(cotizacionSeleccionada);
+        const telefono = obtenerTelefonoContacto(cotizacionSeleccionada.contactoId);
+
+        return {
+          ...prev,
+          cotizacionId: cotizacionSeleccionada.id,
+          cotizacionCodigo: cotizacionSeleccionada.codigo || '',
+          empresaId: cotizacionSeleccionada.empresaId || '',
+          empresaNombre,
+          contactoId: cotizacionSeleccionada.contactoId || '',
+          contactoNombre,
+          cliente: empresaNombre,
+          telefono,
+          producto: cotizacionSeleccionada.descripcion || cotizacionSeleccionada.categoria || '',
+          total: String(cotizacionSeleccionada.total || ''),
+          observaciones:
+            prev.observaciones ||
+            cotizacionSeleccionada.observaciones ||
+            '',
+        };
+      }
+
+      return { ...prev, [name]: value };
+    });
   };
 
   const limpiar = () => {
-    setForm({
-      codigo: '',
-      cliente: '',
-      telefono: '',
-      producto: '',
-      cantidad: '',
-      total: '',
-      anticipo: '',
-      estado: 'Pendiente',
-      fecha: new Date().toISOString().slice(0, 10),
-      observaciones: '',
-    });
-
+    setForm(formInicial());
     setEditandoId(null);
   };
 
   const guardar = (e) => {
     e.preventDefault();
 
-    if (!form.cliente.trim() || !form.producto.trim()) return;
+    if (!form.cotizacionId && !form.cliente.trim()) {
+      alert('Debés seleccionar una cotización o indicar un cliente.');
+      return;
+    }
+
+    if (!form.producto.trim()) {
+      alert('Debés indicar el producto o trabajo del pedido.');
+      return;
+    }
+
+    const cotizacionSeleccionada = cotizaciones.find(
+      (cotizacion) => cotizacion.id === form.cotizacionId
+    );
 
     const datos = {
       codigo: form.codigo.trim() || `PED-${Date.now()}`,
+      cotizacionId: form.cotizacionId,
+      cotizacionCodigo:
+        form.cotizacionCodigo || cotizacionSeleccionada?.codigo || '',
+      empresaId: form.empresaId || cotizacionSeleccionada?.empresaId || '',
+      empresaNombre:
+        form.empresaNombre ||
+        (cotizacionSeleccionada ? obtenerEmpresaNombre(cotizacionSeleccionada) : ''),
+      contactoId: form.contactoId || cotizacionSeleccionada?.contactoId || '',
+      contactoNombre:
+        form.contactoNombre ||
+        (cotizacionSeleccionada ? obtenerContactoNombre(cotizacionSeleccionada) : ''),
       cliente: form.cliente.trim(),
       telefono: form.telefono.trim(),
       producto: form.producto.trim(),
@@ -76,21 +179,45 @@ export default function Pedidos() {
   const editar = (item) => {
     setEditandoId(item.id);
 
+    const cotizacion = cotizaciones.find(
+      (cotizacionItem) => cotizacionItem.id === item.cotizacionId
+    );
+
     setForm({
       codigo: item.codigo || '',
-      cliente: item.cliente || '',
+      cotizacionId: item.cotizacionId || '',
+      cotizacionCodigo: item.cotizacionCodigo || cotizacion?.codigo || '',
+      empresaId: item.empresaId || cotizacion?.empresaId || '',
+      empresaNombre:
+        item.empresaNombre ||
+        (cotizacion ? obtenerEmpresaNombre(cotizacion) : '') ||
+        item.cliente ||
+        '',
+      contactoId: item.contactoId || cotizacion?.contactoId || '',
+      contactoNombre:
+        item.contactoNombre ||
+        (cotizacion ? obtenerContactoNombre(cotizacion) : '') ||
+        '',
+      cliente:
+        item.cliente ||
+        item.empresaNombre ||
+        (cotizacion ? obtenerEmpresaNombre(cotizacion) : '') ||
+        '',
       telefono: item.telefono || '',
-      producto: item.producto || '',
+      producto: item.producto || cotizacion?.descripcion || '',
       cantidad: String(item.cantidad || ''),
       total: String(item.total || ''),
       anticipo: String(item.anticipo || ''),
       estado: item.estado || 'Pendiente',
-      fecha: item.fecha || new Date().toISOString().slice(0, 10),
+      fecha: item.fecha || fechaActual(),
       observaciones: item.observaciones || '',
     });
   };
 
   const eliminar = (id) => {
+    const confirmar = window.confirm('¿Seguro que querés eliminar este pedido?');
+    if (!confirmar) return;
+
     eliminarPedido(id);
     if (editandoId === id) limpiar();
   };
@@ -119,7 +246,7 @@ export default function Pedidos() {
       <div className="page-header">
         <div>
           <h2>Pedidos</h2>
-          <p>Registro general de pedidos del sistema.</p>
+          <p>Registro general de pedidos conectados a cotizaciones.</p>
         </div>
       </div>
 
@@ -150,7 +277,23 @@ export default function Pedidos() {
 
         <div className="form-grid">
           <label>
-            Código
+            Cotización
+            <select
+              name="cotizacionId"
+              value={form.cotizacionId}
+              onChange={cambiar}
+            >
+              <option value="">Seleccionar cotización</option>
+              {cotizacionesDisponibles.map((cotizacion) => (
+                <option key={cotizacion.id} value={cotizacion.id}>
+                  {cotizacion.codigo || 'Sin código'} - {obtenerEmpresaNombre(cotizacion) || 'Sin empresa'} - C$ {Number(cotizacion.total || 0).toFixed(2)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Código pedido
             <input
               name="codigo"
               value={form.codigo}
@@ -160,12 +303,24 @@ export default function Pedidos() {
           </label>
 
           <label>
-            Cliente
+            Empresa / Cliente
             <input
               name="cliente"
               value={form.cliente}
               onChange={cambiar}
-              placeholder="Nombre del cliente"
+              placeholder="Se completa desde la cotización"
+              readOnly={Boolean(form.cotizacionId)}
+            />
+          </label>
+
+          <label>
+            Contacto
+            <input
+              name="contactoNombre"
+              value={form.contactoNombre}
+              onChange={cambiar}
+              placeholder="Contacto relacionado"
+              readOnly={Boolean(form.cotizacionId)}
             />
           </label>
 
@@ -274,7 +429,8 @@ export default function Pedidos() {
           <thead>
             <tr>
               <th>Código</th>
-              <th>Cliente</th>
+              <th>Cotización</th>
+              <th>Empresa / Contacto</th>
               <th>Producto</th>
               <th>Total</th>
               <th>Anticipo</th>
@@ -287,7 +443,7 @@ export default function Pedidos() {
           <tbody>
             {pedidos.length === 0 ? (
               <tr>
-                <td colSpan="8">No hay pedidos registrados.</td>
+                <td colSpan="9">No hay pedidos registrados.</td>
               </tr>
             ) : (
               pedidos.map((item) => {
@@ -299,9 +455,13 @@ export default function Pedidos() {
                     <td>{item.codigo}</td>
 
                     <td>
-                      <strong>{item.cliente}</strong>
+                      {item.cotizacionCodigo || 'Manual'}
+                    </td>
+
+                    <td>
+                      <strong>{item.empresaNombre || item.cliente}</strong>
                       <br />
-                      <small>{item.telefono}</small>
+                      <small>{item.contactoNombre || item.telefono || 'Sin contacto'}</small>
                     </td>
 
                     <td>

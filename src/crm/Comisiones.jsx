@@ -79,11 +79,9 @@ export default function Comisiones() {
     };
 
     if (editandoId) {
-      setComisiones((prev) =>
-        prev.map((item) => (item.id === editandoId ? datos : item))
-      );
+      actualizarComision(datos);
     } else {
-      setComisiones((prev) => [datos, ...prev]);
+      crearComision(datos);
     }
 
     limpiar();
@@ -108,7 +106,7 @@ export default function Comisiones() {
   };
 
   const eliminar = (id) => {
-    setComisiones((prev) => prev.filter((item) => item.id !== id));
+    eliminarComision(id);
 
     if (editandoId === id) limpiar();
   };

@@ -1,105 +1,259 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
+const fechaActual = () => new Date().toISOString().slice(0, 10);
+
+const formInicial = () => ({
+  codigo: '',
+  ordenTrabajoId: '',
+  ordenTrabajoCodigo: '',
+  pedidoId: '',
+  pedidoCodigo: '',
+  cotizacionId: '',
+  cotizacionCodigo: '',
+  empresaId: '',
+  empresaNombre: '',
+  contactoId: '',
+  contactoNombre: '',
+  cliente: '',
+  telefono: '',
+  producto: '',
+  cantidad: '',
+  total: '',
+  material: '',
+  materiales: '',
+  medidas: '',
+  responsable: '',
+  fechaInicio: fechaActual(),
+  fechaEntrega: '',
+  etapa: 'Pendiente',
+  prioridad: 'Media',
+  avance: '',
+  nota: '',
+});
+
 export default function Produccion() {
   const {
+    ordenesTrabajo,
     produccion,
     crearProduccion,
     actualizarProduccion,
     eliminarProduccion,
   } = useCore();
 
-  const ordenes = produccion;
-
-  const [formulario, setFormulario] = useState({
-    codigo: '',
-    cliente: '',
-    pedido: '',
-    producto: '',
-    material: '',
-    responsable: '',
-    fechaInicio: '',
-    fechaEntrega: '',
-    etapa: 'Pendiente',
-    prioridad: 'Media',
-    avance: '',
-    nota: '',
-  });
-
+  const [formulario, setFormulario] = useState(formInicial());
   const [busqueda, setBusqueda] = useState('');
   const [editandoId, setEditandoId] = useState(null);
 
-  const limpiarFormulario = () => {
-    setFormulario({
-      codigo: '',
-      cliente: '',
-      pedido: '',
-      producto: '',
-      material: '',
-      responsable: '',
-      fechaInicio: '',
-      fechaEntrega: '',
-      etapa: 'Pendiente',
-      prioridad: 'Media',
-      avance: '',
-      nota: '',
+  const ordenesTrabajoDisponibles = useMemo(() => {
+    return ordenesTrabajo.filter((orden) => {
+      const estado = orden.estado || '';
+      return estado !== 'Cancelada' && estado !== 'Anulada';
     });
+  }, [ordenesTrabajo]);
 
+  const obtenerEmpresaNombre = (orden) => {
+    return orden.empresaNombre || orden.empresa || orden.cliente || '';
+  };
+
+  const obtenerContactoNombre = (orden) => {
+    return orden.contactoNombre || orden.contacto || '';
+  };
+
+  const cambiarFormulario = (e) => {
+    const { name, value } = e.target;
+
+    setFormulario((prev) => {
+      if (name === 'ordenTrabajoId') {
+        const ordenSeleccionada = ordenesTrabajo.find((orden) => orden.id === value);
+
+        if (!ordenSeleccionada) {
+          return {
+            ...prev,
+            ordenTrabajoId: '',
+            ordenTrabajoCodigo: '',
+            pedidoId: '',
+            pedidoCodigo: '',
+            cotizacionId: '',
+            cotizacionCodigo: '',
+            empresaId: '',
+            empresaNombre: '',
+            contactoId: '',
+            contactoNombre: '',
+            cliente: '',
+            telefono: '',
+            producto: '',
+            cantidad: '',
+            total: '',
+            material: '',
+            materiales: '',
+            medidas: '',
+            nota: prev.nota,
+          };
+        }
+
+        const empresaNombre = obtenerEmpresaNombre(ordenSeleccionada);
+        const contactoNombre = obtenerContactoNombre(ordenSeleccionada);
+        const materiales = ordenSeleccionada.materiales || ordenSeleccionada.material || '';
+
+        return {
+          ...prev,
+          ordenTrabajoId: ordenSeleccionada.id,
+          ordenTrabajoCodigo: ordenSeleccionada.codigo || '',
+          pedidoId: ordenSeleccionada.pedidoId || '',
+          pedidoCodigo: ordenSeleccionada.pedidoCodigo || '',
+          cotizacionId: ordenSeleccionada.cotizacionId || '',
+          cotizacionCodigo: ordenSeleccionada.cotizacionCodigo || '',
+          empresaId: ordenSeleccionada.empresaId || '',
+          empresaNombre,
+          contactoId: ordenSeleccionada.contactoId || '',
+          contactoNombre,
+          cliente: empresaNombre,
+          telefono: ordenSeleccionada.telefono || '',
+          producto: ordenSeleccionada.producto || ordenSeleccionada.descripcion || '',
+          cantidad: String(ordenSeleccionada.cantidad || ''),
+          total: String(ordenSeleccionada.total || ''),
+          material: materiales,
+          materiales,
+          medidas: ordenSeleccionada.medidas || '',
+          nota: prev.nota || ordenSeleccionada.observaciones || '',
+        };
+      }
+
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const limpiarFormulario = () => {
+    setFormulario(formInicial());
     setEditandoId(null);
   };
 
   const guardarOrden = (e) => {
     e.preventDefault();
 
-    if (!formulario.cliente.trim() || !formulario.producto.trim()) {
-      alert('Debés ingresar cliente y producto.');
+    if (!formulario.ordenTrabajoId && !formulario.cliente.trim()) {
+      alert('Debés seleccionar una orden de trabajo o indicar el cliente.');
       return;
     }
 
+    if (!formulario.producto.trim()) {
+      alert('Debés indicar el producto o trabajo a producir.');
+      return;
+    }
+
+    const ordenSeleccionada = ordenesTrabajo.find(
+      (orden) => orden.id === formulario.ordenTrabajoId
+    );
+
+    const empresaNombre =
+      formulario.empresaNombre ||
+      (ordenSeleccionada ? obtenerEmpresaNombre(ordenSeleccionada) : '') ||
+      formulario.cliente;
+
+    const contactoNombre =
+      formulario.contactoNombre ||
+      (ordenSeleccionada ? obtenerContactoNombre(ordenSeleccionada) : '');
+
     const datosOrden = {
-      ...formulario,
-      codigo: formulario.codigo || `OT-${Date.now()}`,
+      codigo: formulario.codigo.trim() || `PROD-${Date.now()}`,
+      ordenTrabajoId: formulario.ordenTrabajoId,
+      ordenTrabajoCodigo:
+        formulario.ordenTrabajoCodigo || ordenSeleccionada?.codigo || '',
+      pedidoId: formulario.pedidoId || ordenSeleccionada?.pedidoId || '',
+      pedidoCodigo: formulario.pedidoCodigo || ordenSeleccionada?.pedidoCodigo || '',
+      cotizacionId: formulario.cotizacionId || ordenSeleccionada?.cotizacionId || '',
+      cotizacionCodigo:
+        formulario.cotizacionCodigo || ordenSeleccionada?.cotizacionCodigo || '',
+      empresaId: formulario.empresaId || ordenSeleccionada?.empresaId || '',
+      empresaNombre,
+      contactoId: formulario.contactoId || ordenSeleccionada?.contactoId || '',
+      contactoNombre,
+      cliente: formulario.cliente.trim() || empresaNombre,
+      telefono: formulario.telefono.trim(),
+      producto: formulario.producto.trim(),
+      cantidad: Number(formulario.cantidad) || 0,
+      total: Number(formulario.total) || 0,
+      material: formulario.material.trim(),
+      materiales: formulario.materiales.trim(),
+      medidas: formulario.medidas.trim(),
+      responsable: formulario.responsable.trim(),
+      fechaInicio: formulario.fechaInicio,
+      fechaEntrega: formulario.fechaEntrega,
+      etapa: formulario.etapa,
+      prioridad: formulario.prioridad,
       avance: Number(formulario.avance || 0),
+      nota: formulario.nota.trim(),
+      actualizado: new Date().toISOString(),
     };
 
     if (editandoId) {
-      setOrdenes((prev) =>
-        prev.map((orden) =>
-          orden.id === editandoId ? { ...datosOrden, id: editandoId } : orden
-        )
-      );
+      actualizarProduccion(editandoId, datosOrden);
     } else {
-      setOrdenes((prev) => [{ ...datosOrden, id: Date.now() }, ...prev]);
+      crearProduccion(datosOrden);
     }
 
     limpiarFormulario();
   };
 
   const editarOrden = (orden) => {
+    const ordenTrabajo = ordenesTrabajo.find(
+      (item) => item.id === orden.ordenTrabajoId
+    );
+
     setFormulario({
       codigo: orden.codigo || '',
-      cliente: orden.cliente || '',
-      pedido: orden.pedido || '',
-      producto: orden.producto || '',
-      material: orden.material || '',
+      ordenTrabajoId: orden.ordenTrabajoId || '',
+      ordenTrabajoCodigo: orden.ordenTrabajoCodigo || ordenTrabajo?.codigo || '',
+      pedidoId: orden.pedidoId || ordenTrabajo?.pedidoId || '',
+      pedidoCodigo: orden.pedidoCodigo || ordenTrabajo?.pedidoCodigo || '',
+      cotizacionId: orden.cotizacionId || ordenTrabajo?.cotizacionId || '',
+      cotizacionCodigo:
+        orden.cotizacionCodigo || ordenTrabajo?.cotizacionCodigo || '',
+      empresaId: orden.empresaId || ordenTrabajo?.empresaId || '',
+      empresaNombre:
+        orden.empresaNombre ||
+        (ordenTrabajo ? obtenerEmpresaNombre(ordenTrabajo) : '') ||
+        orden.empresa ||
+        orden.cliente ||
+        '',
+      contactoId: orden.contactoId || ordenTrabajo?.contactoId || '',
+      contactoNombre:
+        orden.contactoNombre ||
+        (ordenTrabajo ? obtenerContactoNombre(ordenTrabajo) : '') ||
+        orden.contacto ||
+        '',
+      cliente:
+        orden.cliente ||
+        orden.empresaNombre ||
+        (ordenTrabajo ? obtenerEmpresaNombre(ordenTrabajo) : '') ||
+        '',
+      telefono: orden.telefono || ordenTrabajo?.telefono || '',
+      producto: orden.producto || ordenTrabajo?.producto || '',
+      cantidad: String(orden.cantidad || ordenTrabajo?.cantidad || ''),
+      total: String(orden.total || ordenTrabajo?.total || ''),
+      material: orden.material || orden.materiales || ordenTrabajo?.materiales || '',
+      materiales: orden.materiales || ordenTrabajo?.materiales || '',
+      medidas: orden.medidas || ordenTrabajo?.medidas || '',
       responsable: orden.responsable || '',
-      fechaInicio: orden.fechaInicio || '',
+      fechaInicio: orden.fechaInicio || fechaActual(),
       fechaEntrega: orden.fechaEntrega || '',
       etapa: orden.etapa || 'Pendiente',
       prioridad: orden.prioridad || 'Media',
-      avance: orden.avance || '',
-      nota: orden.nota || '',
+      avance: String(orden.avance || ''),
+      nota: orden.nota || orden.observaciones || '',
     });
 
     setEditandoId(orden.id);
   };
 
   const eliminarOrden = (id) => {
-    if (!window.confirm('¿Seguro que querés eliminar esta orden de producción?')) {
-      return;
-    }
+    const confirmar = window.confirm(
+      '¿Seguro que querés eliminar esta orden de producción?'
+    );
+    if (!confirmar) return;
 
-    setOrdenes((prev) => prev.filter((orden) => orden.id !== id));
+    eliminarProduccion(id);
 
     if (editandoId === id) {
       limpiarFormulario();
@@ -107,25 +261,25 @@ export default function Produccion() {
   };
 
   const ordenesFiltradas = useMemo(() => {
-    return ordenes.filter((orden) =>
-      `${orden.codigo} ${orden.cliente} ${orden.pedido} ${orden.producto} ${orden.material} ${orden.responsable} ${orden.etapa} ${orden.prioridad}`
+    return produccion.filter((orden) =>
+      `${orden.codigo} ${orden.ordenTrabajoCodigo} ${orden.pedidoCodigo} ${orden.cotizacionCodigo} ${orden.cliente} ${orden.empresaNombre} ${orden.contactoNombre} ${orden.producto} ${orden.material} ${orden.materiales} ${orden.responsable} ${orden.etapa} ${orden.prioridad}`
         .toLowerCase()
         .includes(busqueda.toLowerCase())
     );
-  }, [ordenes, busqueda]);
+  }, [produccion, busqueda]);
 
   const resumen = useMemo(() => {
     return {
-      total: ordenes.length,
-      pendientes: ordenes.filter((orden) => orden.etapa === 'Pendiente')
+      total: produccion.length,
+      pendientes: produccion.filter((orden) => orden.etapa === 'Pendiente')
         .length,
-      produccion: ordenes.filter((orden) => orden.etapa === 'En producción')
+      produccion: produccion.filter((orden) => orden.etapa === 'En producción')
         .length,
-      listas: ordenes.filter((orden) => orden.etapa === 'Lista').length,
-      entregadas: ordenes.filter((orden) => orden.etapa === 'Entregada')
+      listas: produccion.filter((orden) => orden.etapa === 'Lista').length,
+      entregadas: produccion.filter((orden) => orden.etapa === 'Entregada')
         .length,
     };
-  }, [ordenes]);
+  }, [produccion]);
 
   return (
     <div className="crm-page">
@@ -133,8 +287,8 @@ export default function Produccion() {
         <div>
           <h2>Producción</h2>
           <p>
-            Control de órdenes de trabajo, etapas de producción, responsables y
-            fechas de entrega.
+            Control conectado a órdenes de trabajo, pedidos, cotizaciones,
+            empresas y contactos.
           </p>
         </div>
       </div>
@@ -171,56 +325,120 @@ export default function Produccion() {
           <h3>{editandoId ? 'Editar orden' : 'Nueva orden de producción'}</h3>
 
           <label>
-            Código OT
+            Orden de trabajo
+            <select
+              name="ordenTrabajoId"
+              value={formulario.ordenTrabajoId}
+              onChange={cambiarFormulario}
+            >
+              <option value="">Seleccionar orden de trabajo</option>
+              {ordenesTrabajoDisponibles.map((orden) => (
+                <option key={orden.id} value={orden.id}>
+                  {orden.codigo || 'Sin código'} -{' '}
+                  {obtenerEmpresaNombre(orden) || 'Sin cliente'} -{' '}
+                  {orden.producto || orden.descripcion || 'Sin trabajo'}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Código producción
             <input
+              name="codigo"
               value={formulario.codigo}
-              onChange={(e) =>
-                setFormulario({ ...formulario, codigo: e.target.value })
-              }
-              placeholder="Ej: OT-0001"
+              onChange={cambiarFormulario}
+              placeholder="Ej: PROD-0001"
             />
           </label>
 
           <label>
-            Cliente
+            Empresa / Cliente
             <input
+              name="cliente"
               value={formulario.cliente}
-              onChange={(e) =>
-                setFormulario({ ...formulario, cliente: e.target.value })
-              }
-              placeholder="Ej: COMEX"
+              onChange={cambiarFormulario}
+              placeholder="Se completa desde la OT"
+              readOnly={Boolean(formulario.ordenTrabajoId)}
+            />
+          </label>
+
+          <label>
+            Contacto
+            <input
+              name="contactoNombre"
+              value={formulario.contactoNombre}
+              onChange={cambiarFormulario}
+              placeholder="Contacto relacionado"
+              readOnly={Boolean(formulario.ordenTrabajoId)}
             />
           </label>
 
           <label>
             Pedido relacionado
             <input
-              value={formulario.pedido}
-              onChange={(e) =>
-                setFormulario({ ...formulario, pedido: e.target.value })
-              }
-              placeholder="Ej: Pedido #001"
+              name="pedidoCodigo"
+              value={formulario.pedidoCodigo}
+              onChange={cambiarFormulario}
+              placeholder="Se completa desde la OT"
+              readOnly={Boolean(formulario.ordenTrabajoId)}
+            />
+          </label>
+
+          <label>
+            Cotización relacionada
+            <input
+              name="cotizacionCodigo"
+              value={formulario.cotizacionCodigo}
+              onChange={cambiarFormulario}
+              placeholder="Se completa desde la OT"
+              readOnly={Boolean(formulario.ordenTrabajoId)}
             />
           </label>
 
           <label>
             Producto / Trabajo
             <input
+              name="producto"
               value={formulario.producto}
-              onChange={(e) =>
-                setFormulario({ ...formulario, producto: e.target.value })
-              }
+              onChange={cambiarFormulario}
               placeholder="Ej: Rótulo luminoso, impresión, acrílico..."
+              readOnly={Boolean(formulario.ordenTrabajoId)}
+            />
+          </label>
+
+          <label>
+            Cantidad
+            <input
+              name="cantidad"
+              type="number"
+              min="0"
+              value={formulario.cantidad}
+              onChange={cambiarFormulario}
+              placeholder="0"
+            />
+          </label>
+
+          <label>
+            Total relacionado
+            <input
+              name="total"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formulario.total}
+              onChange={cambiarFormulario}
+              placeholder="0.00"
+              readOnly={Boolean(formulario.ordenTrabajoId)}
             />
           </label>
 
           <label>
             Material principal
             <input
+              name="material"
               value={formulario.material}
-              onChange={(e) =>
-                setFormulario({ ...formulario, material: e.target.value })
-              }
+              onChange={cambiarFormulario}
               placeholder="Ej: PVC, acrílico, vinil, lona..."
             />
           </label>
@@ -228,10 +446,9 @@ export default function Produccion() {
           <label>
             Responsable
             <input
+              name="responsable"
               value={formulario.responsable}
-              onChange={(e) =>
-                setFormulario({ ...formulario, responsable: e.target.value })
-              }
+              onChange={cambiarFormulario}
               placeholder="Ej: Erick Cano"
             />
           </label>
@@ -239,32 +456,29 @@ export default function Produccion() {
           <label>
             Fecha de inicio
             <input
+              name="fechaInicio"
               type="date"
               value={formulario.fechaInicio}
-              onChange={(e) =>
-                setFormulario({ ...formulario, fechaInicio: e.target.value })
-              }
+              onChange={cambiarFormulario}
             />
           </label>
 
           <label>
             Fecha de entrega
             <input
+              name="fechaEntrega"
               type="date"
               value={formulario.fechaEntrega}
-              onChange={(e) =>
-                setFormulario({ ...formulario, fechaEntrega: e.target.value })
-              }
+              onChange={cambiarFormulario}
             />
           </label>
 
           <label>
             Etapa
             <select
+              name="etapa"
               value={formulario.etapa}
-              onChange={(e) =>
-                setFormulario({ ...formulario, etapa: e.target.value })
-              }
+              onChange={cambiarFormulario}
             >
               <option>Pendiente</option>
               <option>Diseño</option>
@@ -284,10 +498,9 @@ export default function Produccion() {
           <label>
             Prioridad
             <select
+              name="prioridad"
               value={formulario.prioridad}
-              onChange={(e) =>
-                setFormulario({ ...formulario, prioridad: e.target.value })
-              }
+              onChange={cambiarFormulario}
             >
               <option>Baja</option>
               <option>Media</option>
@@ -299,26 +512,46 @@ export default function Produccion() {
           <label>
             Avance %
             <input
+              name="avance"
               type="number"
               min="0"
               max="100"
               value={formulario.avance}
-              onChange={(e) =>
-                setFormulario({ ...formulario, avance: e.target.value })
-              }
+              onChange={cambiarFormulario}
               placeholder="Ej: 50"
+            />
+          </label>
+
+          <label>
+            Materiales requeridos
+            <textarea
+              name="materiales"
+              rows="3"
+              value={formulario.materiales}
+              onChange={cambiarFormulario}
+              placeholder="Materiales requeridos para producción..."
+            />
+          </label>
+
+          <label>
+            Medidas / Especificaciones
+            <textarea
+              name="medidas"
+              rows="3"
+              value={formulario.medidas}
+              onChange={cambiarFormulario}
+              placeholder="Medidas, acabados, cantidades o detalles físicos..."
             />
           </label>
 
           <label>
             Nota técnica
             <textarea
+              name="nota"
               rows="4"
               value={formulario.nota}
-              onChange={(e) =>
-                setFormulario({ ...formulario, nota: e.target.value })
-              }
-              placeholder="Detalles de producción, materiales, medidas o pendientes..."
+              onChange={cambiarFormulario}
+              placeholder="Detalles de producción, pendientes, instalación o control interno..."
             />
           </label>
 
@@ -340,7 +573,7 @@ export default function Produccion() {
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por cliente, OT, producto, etapa..."
+              placeholder="Buscar por cliente, OT, pedido, producto, etapa..."
             />
           </div>
 
@@ -348,8 +581,10 @@ export default function Produccion() {
             <table className="crm-table">
               <thead>
                 <tr>
+                  <th>Producción</th>
                   <th>OT</th>
-                  <th>Cliente</th>
+                  <th>Empresa</th>
+                  <th>Contacto</th>
                   <th>Pedido</th>
                   <th>Producto</th>
                   <th>Material</th>
@@ -365,14 +600,18 @@ export default function Produccion() {
                 {ordenesFiltradas.length > 0 ? (
                   ordenesFiltradas.map((orden) => (
                     <tr key={orden.id}>
-                      <td>{orden.codigo}</td>
-                      <td>{orden.cliente}</td>
-                      <td>{orden.pedido || 'Sin pedido'}</td>
-                      <td>{orden.producto}</td>
-                      <td>{orden.material || 'Sin material'}</td>
+                      <td>{orden.codigo || 'Sin código'}</td>
+                      <td>{orden.ordenTrabajoCodigo || 'Sin OT'}</td>
+                      <td>
+                        {orden.empresaNombre || orden.empresa || orden.cliente || 'Sin empresa'}
+                      </td>
+                      <td>{orden.contactoNombre || orden.contacto || 'Sin contacto'}</td>
+                      <td>{orden.pedidoCodigo || orden.pedido || 'Sin pedido'}</td>
+                      <td>{orden.producto || 'Sin producto'}</td>
+                      <td>{orden.material || orden.materiales || 'Sin material'}</td>
                       <td>{orden.responsable || 'Sin asignar'}</td>
                       <td>{orden.fechaEntrega || 'Sin fecha'}</td>
-                      <td>{orden.etapa}</td>
+                      <td>{orden.etapa || 'Pendiente'}</td>
                       <td>{orden.avance || 0}%</td>
                       <td>
                         <div className="crm-row-actions">
@@ -392,7 +631,7 @@ export default function Produccion() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="10">
+                    <td colSpan="12">
                       No hay órdenes de producción registradas.
                     </td>
                   </tr>
@@ -402,8 +641,8 @@ export default function Produccion() {
           </div>
 
           <div className="crm-note">
-            Este módulo será conectado después con pedidos, materiales,
-            inventario y órdenes de trabajo reales.
+            Producción ya está conectada con órdenes de trabajo, pedidos,
+            cotizaciones, empresas y contactos mediante IDs reales.
           </div>
         </div>
       </div>

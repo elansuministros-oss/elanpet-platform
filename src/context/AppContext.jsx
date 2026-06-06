@@ -224,6 +224,86 @@ function mapUsuarioToDb(usuario) {
   };
 }
 
+
+function mapPedidoFromDb(row) {
+  const resumen = row.resumen || {};
+  const veterinaria = row.veterinaria || null;
+  const cliente = row.cliente || {};
+
+  return {
+    id: row.id || row.numero || `pedido-${Date.now()}`,
+    numero: row.numero || '',
+    codigoSeguimiento: row.codigo_seguimiento || row.codigoSeguimiento || '',
+    cliente,
+    veterinaria,
+    items: Array.isArray(row.items) ? row.items : [],
+    veterinariaId: row.veterinaria_id || row.veterinariaId || veterinaria?.id || '',
+    veterinariaCodigo: row.veterinaria_codigo || row.veterinariaCodigo || veterinaria?.codigo || '',
+    resumen: {
+      subtotal: Number(resumen.subtotal || 0),
+      descuentoPorcentaje: Number(resumen.descuentoPorcentaje || resumen.descuento_porcentaje || 0),
+      descuentoMonto: Number(resumen.descuentoMonto || resumen.descuento_monto || 0),
+      total: Number(resumen.total || row.total || 0),
+      comision: Number(resumen.comision || row.comision || 0),
+    },
+    pagoTipo: row.pago_tipo || row.pagoTipo || 'anticipo',
+    anticipoPorcentaje: Number(row.anticipo_porcentaje ?? row.anticipoPorcentaje ?? 60),
+    montoSolicitado: Number(row.monto_solicitado ?? row.montoSolicitado ?? 0),
+    anticipoRequerido: Number(row.anticipo_requerido ?? row.anticipoRequerido ?? 0),
+    anticipoRecibido: Number(row.anticipo_recibido ?? row.anticipoRecibido ?? 0),
+    saldoPendiente: Number(row.saldo_pendiente ?? row.saldoPendiente ?? 0),
+    estado: row.estado || 'pendiente_pago',
+    estadoProduccion: row.estado_produccion || row.estadoProduccion || 'pendiente',
+    pagoEstado: row.pago_estado || row.pagoEstado || 'pendiente_transferencia',
+    seguimientoEstado: row.seguimiento_estado || row.seguimientoEstado || row.estado || 'pendiente_pago',
+    comisionEstado: row.comision_estado || row.comisionEstado || 'no_generada',
+    ordenTrabajo: row.orden_trabajo || row.ordenTrabajo || {},
+    historial: Array.isArray(row.historial) ? row.historial : [],
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    fechaEstimada: row.fecha_estimada || row.fechaEstimada || '',
+  };
+}
+
+function mapPedidoToDb(pedido) {
+  return {
+    numero: pedido.numero || '',
+    codigo_seguimiento: pedido.codigoSeguimiento || '',
+    cliente: pedido.cliente || {},
+    veterinaria: pedido.veterinaria || null,
+    items: pedido.items || [],
+    veterinaria_id: esUuid(pedido.veterinariaId) ? pedido.veterinariaId : null,
+    veterinaria_codigo: pedido.veterinariaCodigo || pedido.veterinaria?.codigo || '',
+    resumen: pedido.resumen || {},
+    pago_tipo: pedido.pagoTipo || 'anticipo',
+    anticipo_porcentaje: Number(pedido.anticipoPorcentaje || 60),
+    monto_solicitado: Number(pedido.montoSolicitado || 0),
+    anticipo_requerido: Number(pedido.anticipoRequerido || 0),
+    anticipo_recibido: Number(pedido.anticipoRecibido || 0),
+    saldo_pendiente: Number(pedido.saldoPendiente || 0),
+    estado: pedido.estado || 'pendiente_pago',
+    estado_produccion: pedido.estadoProduccion || 'pendiente',
+    pago_estado: pedido.pagoEstado || 'pendiente_transferencia',
+    seguimiento_estado: pedido.seguimientoEstado || pedido.estado || 'pendiente_pago',
+    comision_estado: pedido.comisionEstado || 'no_generada',
+    orden_trabajo: pedido.ordenTrabajo || {},
+    historial: pedido.historial || [],
+    fecha_estimada: pedido.fechaEstimada || null,
+  };
+}
+
+function unirPedidos(locales = [], remotos = []) {
+  const mapa = new Map();
+  [...locales, ...remotos].forEach((pedido) => {
+    const clave = pedido.id || pedido.numero || pedido.codigoSeguimiento;
+    if (!clave) return;
+    mapa.set(clave, { ...(mapa.get(clave) || {}), ...pedido });
+  });
+
+  return Array.from(mapa.values()).sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
 function esUuid(valor) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(valor || ''));
 }
@@ -291,10 +371,20 @@ export function AppProvider({ children }) {
 
         let users = asegurarUsuariosBase((usersData || []).map(mapUsuarioFromDb));
 
+        const { data: pedidosData, error: pedidosError } = await supabase
+          .from('pedidos')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (pedidosError) throw pedidosError;
+
+        const pedidosRemotos = (pedidosData || []).map(mapPedidoFromDb);
+
         if (!activo) return;
 
         setVeterinarias(vets);
         setUsuarios(users);
+        setPedidos((prev) => unirPedidos(prev, pedidosRemotos));
 
         const veterinariaActual = leerStorage('elanpet_veterinaria_actual', null);
         if (veterinariaActual?.id) {
@@ -459,21 +549,24 @@ export function AppProvider({ children }) {
       whatsapp: normalizarWhatsAppNicaragua(cliente?.whatsapp || cliente?.telefono),
       telefono: normalizarWhatsAppNicaragua(cliente?.telefono || cliente?.whatsapp),
     };
+
     const numero = `PED-${String(Date.now()).slice(-6)}`;
     const anticipoPorcentaje = Number(configuracion.anticipoPorcentaje || 60);
     const montoSolicitado = pagoTipo === 'total' ? resumen.total : resumen.total * (anticipoPorcentaje / 100);
+    const veterinariaActual = veterinaria ? { ...veterinaria, linkAfiliado: `/v/${veterinaria.codigo || veterinaria.slug}` } : null;
+
     const pedido = {
       id: `pedido-${Date.now()}`,
       numero,
       codigoSeguimiento: '',
       cliente: clienteNormalizado,
-      veterinaria: veterinaria ? { ...veterinaria, linkAfiliado: `/v/${veterinaria.codigo || veterinaria.slug}` } : null,
+      veterinaria: veterinariaActual,
       items: carrito,
-      veterinariaId: veterinaria?.id || '',
-      veterinariaCodigo: veterinaria?.codigo || '',
+      veterinariaId: veterinariaActual?.id || '',
+      veterinariaCodigo: veterinariaActual?.codigo || '',
       resumen: {
         ...resumen,
-        comision: veterinaria ? (Number(resumen.total || 0) * Number(veterinaria.comisionPorcentaje || 10)) / 100 : 0,
+        comision: veterinariaActual ? (Number(resumen.total || 0) * Number(veterinariaActual.comisionPorcentaje || 10)) / 100 : 0,
       },
       pagoTipo,
       anticipoPorcentaje,
@@ -486,16 +579,60 @@ export function AppProvider({ children }) {
       pagoEstado: 'pendiente_transferencia',
       seguimientoEstado: 'pendiente_pago',
       comisionEstado: 'no_generada',
-      ordenTrabajo: { codigoOT: `OT-${String(Date.now()).slice(-6)}`, responsable: '', observaciones: '', fecha: new Date().toISOString(), estadoProduccion: 'pendiente', evidencias: { inicial: '', proceso: '', terminado: '', entrega: '' } },
-      historial: [{ estado: 'pendiente', fecha: new Date().toISOString(), nota: 'Pedido creado desde carrito.' }],
+      ordenTrabajo: {
+        codigoOT: `OT-${String(Date.now()).slice(-6)}`,
+        responsable: '',
+        observaciones: '',
+        fecha: new Date().toISOString(),
+        estadoProduccion: 'pendiente',
+        evidencias: { inicial: '', proceso: '', terminado: '', entrega: '' },
+      },
+      historial: [{ estado: 'pendiente_pago', fecha: new Date().toISOString(), nota: 'Pedido creado desde carrito.' }],
       createdAt: new Date().toISOString(),
       fechaEstimada: '',
     };
+
     setPedidos((prev) => [pedido, ...prev]);
+
+    if (supabase) {
+      supabase
+        .from('pedidos')
+        .insert(mapPedidoToDb(pedido))
+        .select('*')
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error guardando pedido en Supabase:', error);
+            window.alert('El pedido fue creado y el WhatsApp salió, pero no se pudo guardar en Supabase. Revisá la tabla pedidos.');
+            return;
+          }
+
+          const pedidoGuardado = mapPedidoFromDb(data);
+          setPedidos((prev) => prev.map((p) => (p.id === pedido.id ? { ...p, ...pedidoGuardado } : p)));
+        });
+    }
+
     return pedido;
   };
 
-  const actualizarPedido = (pedido) => setPedidos((prev) => prev.map((p) => (p.id === pedido.id ? { ...p, ...pedido } : p)));
+  const actualizarPedido = (pedido) => {
+    const pedidoActualizado = { ...pedido };
+
+    setPedidos((prev) => prev.map((p) => (p.id === pedidoActualizado.id ? { ...p, ...pedidoActualizado } : p)));
+
+    if (supabase && esUuid(pedidoActualizado.id)) {
+      supabase
+        .from('pedidos')
+        .update(mapPedidoToDb(pedidoActualizado))
+        .eq('id', pedidoActualizado.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error actualizando pedido en Supabase:', error);
+            window.alert('No se pudo actualizar el pedido en Supabase.');
+          }
+        });
+    }
+  };
 
   const confirmarAnticipo = (pedido, pagoTipoConfirmado = pedido.pagoTipo || 'anticipo') => {
     const esTotal = pagoTipoConfirmado === 'total';

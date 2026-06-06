@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CreditCard, Send, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatoC$ as formatoBaseC$ } from '../lib/calculos';
 
 const formatoC$ = (valor) => {
   const numero = Number(valor || 0);
@@ -119,7 +118,7 @@ export default function Carrito() {
           <input placeholder="WhatsApp con código de país. Ej: 50588888888" value={cliente.whatsapp} onChange={(e) => { setCliente({ ...cliente, whatsapp: e.target.value }); setErrorWhatsapp(''); }} onBlur={() => setCliente((prev) => ({ ...prev, whatsapp: normalizarWhatsApp(prev.whatsapp) }))} />
           {errorWhatsapp && <p className="error-text">{errorWhatsapp}</p>}
           <button className="send-full" onClick={enviarPedido}><Send size={18} /> Enviar pedido</button>
-          {ultimoPedido && <p className="success-msg">Pedido {ultimoPedido.numero} creado como pendiente de pago. Al confirmar el pago se generará el código de seguimiento.</p>}
+          {ultimoPedido && <p className="success-msg">Pedido {ultimoPedido.numero} creado como pendiente de pago y registrado para administración. Al confirmar el pago se generará el código de seguimiento.</p>}
         </div>
       </>}
     </main>

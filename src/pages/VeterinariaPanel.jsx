@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { etiquetasEstado, useApp } from '../context/AppContext';
-import { formatoC$ as formatoBaseC$ } from '../lib/calculos';
 
 const formatoC$ = (valor) => {
   const numero = Number(valor || 0);
@@ -80,7 +79,16 @@ export default function VeterinariaPanel() {
   };
 
   const url = `https://pet.elankav.com/v/${veterinaria.codigo}`;
-  const misPedidos = pedidos.filter((p) => p.veterinaria?.id === veterinaria.id);
+  const misPedidos = pedidos.filter((p) => {
+    const vetIdPedido = p.veterinariaId || p.veterinaria?.id || '';
+    const vetCodigoPedido = p.veterinariaCodigo || p.veterinaria?.codigo || '';
+
+    return (
+      vetIdPedido === veterinaria.id ||
+      vetCodigoPedido === veterinaria.codigo ||
+      p.veterinaria?.slug === veterinaria.slug
+    );
+  });
   const entregados = misPedidos.filter((p) => p.estado === 'entregado');
 
   const comisionesPendientes = entregados.filter(

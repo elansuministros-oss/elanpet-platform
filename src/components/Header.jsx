@@ -31,7 +31,7 @@ export default function Header({ page, setPage }) {
       <header className="desktop-header">
         <div className="brand" onClick={() => go('home')}>
           <span className="brand-mark"><PawPrint size={20} /></span>
-          <strong>{configuracion.logoTexto || configuracion.nombreSitio || 'ELANPET'}</strong>
+          <strong>{configuracion.nombreSitio || 'PET.ELANKAV.COM'}</strong>
         </div>
 
         <nav className="desktop-nav">

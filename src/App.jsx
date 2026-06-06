@@ -15,7 +15,16 @@ import { useApp } from './context/AppContext';
 import './styles/global.css';
 
 export default function App() {
-  const [page, setPage] = useState('home');
+  const pathInicial = window.location.pathname || '/';
+
+  const paginaInicial = (() => {
+    if (pathInicial.startsWith('/seguimiento')) return 'seguimiento';
+    if (pathInicial.startsWith('/v/')) return 'catalogo';
+    return 'home';
+  })();
+
+  const [page, setPage] = useState(paginaInicial);
+
   const { usuario, configuracion, veterinarias, setVeterinaria } = useApp();
 
   useEffect(() => {
@@ -30,25 +39,44 @@ export default function App() {
     );
   }, [configuracion]);
 
-
   useEffect(() => {
     const path = window.location.pathname || '/';
     const matchVet = path.match(/^\/v\/([^/]+)/i);
 
-    if (matchVet && veterinarias?.length) {
-      const codigo = decodeURIComponent(matchVet[1]).trim().toLowerCase();
-      const vet = veterinarias.find(
-        (v) => String(v.codigo || '').toLowerCase() === codigo || String(v.slug || '').toLowerCase() === codigo
-      );
+    if (!matchVet) return;
 
-      if (vet) {
-        setVeterinaria(vet);
-        setPage('catalogo');
-      }
+    const codigo = decodeURIComponent(matchVet[1]).trim().toLowerCase();
+
+    if (!veterinarias?.length) {
+      setPage('catalogo');
+      return;
+    }
+
+    const vet = veterinarias.find(
+      (v) =>
+        String(v.codigo || '').toLowerCase() === codigo ||
+        String(v.slug || '').toLowerCase() === codigo
+    );
+
+    if (vet) {
+      setVeterinaria(vet);
+      setPage('catalogo');
+    } else {
+      setPage('catalogo');
     }
   }, [veterinarias, setVeterinaria]);
 
-  const ir = (destino) => setPage(destino);
+  const ir = (destino) => {
+    setPage(destino);
+
+    if (destino === 'home') {
+      window.history.pushState({}, '', '/');
+    }
+
+    if (destino === 'seguimiento') {
+      window.history.pushState({}, '', '/seguimiento');
+    }
+  };
 
   return (
     <>

@@ -19,6 +19,9 @@ export default function App() {
 
   const paginaInicial = (() => {
     if (pathInicial.startsWith('/seguimiento')) return 'seguimiento';
+    if (pathInicial.startsWith('/login')) return 'login';
+    if (pathInicial.startsWith('/admin')) return 'admin';
+    if (pathInicial.startsWith('/produccion')) return 'produccion';
     if (pathInicial.startsWith('/v/')) return 'catalogo';
     return 'home';
   })();
@@ -75,6 +78,18 @@ export default function App() {
 
     if (destino === 'seguimiento') {
       window.history.pushState({}, '', '/seguimiento');
+    }
+
+    if (destino === 'login') {
+      window.history.pushState({}, '', '/login');
+    }
+
+    if (destino === 'admin') {
+      window.history.pushState({}, '', '/admin');
+    }
+
+    if (destino === 'produccion') {
+      window.history.pushState({}, '', '/produccion');
     }
   };
 

@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { etiquetasEstado, useApp } from '../context/AppContext';
-import { formatoC$ } from '../lib/calculos';
+import { formatoC$ as formatoBaseC$ } from '../lib/calculos';
+
+const formatoC$ = (valor) => {
+  const numero = Number(valor || 0);
+  return `C$ ${numero.toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 export default function VeterinariaPanel() {
   const { veterinaria, pedidos, usuario, actualizarUsuario } = useApp();

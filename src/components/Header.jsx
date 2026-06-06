@@ -16,7 +16,7 @@ export default function Header({ page, setPage }) {
     go('home');
   };
 
-  const links = [
+  const publicLinks = [
     ['home', 'Inicio'],
     ['catalogo', 'Catálogo'],
     ['trabajos', 'Trabajos'],
@@ -24,12 +24,14 @@ export default function Header({ page, setPage }) {
     ['contacto', 'Contacto'],
   ];
 
+  const links = usuario ? [] : publicLinks;
+
   return (
     <>
       <header className="desktop-header">
         <div className="brand" onClick={() => go('home')}>
           <span className="brand-mark"><PawPrint size={20} /></span>
-          <strong>{configuracion.logoTexto || 'ELANPET.COM'}</strong>
+          <strong>{configuracion.logoTexto || configuracion.nombreSitio || 'ELANPET'}</strong>
         </div>
 
         <nav className="desktop-nav">
@@ -40,6 +42,8 @@ export default function Header({ page, setPage }) {
           ))}
 
           {usuario?.rol === 'admin' && <button onClick={() => go('admin')}>Admin</button>}
+          {usuario?.rol === 'admin' && <button onClick={() => go('produccion')}>Producción</button>}
+          {usuario?.rol === 'produccion' && <button onClick={() => go('produccion')}>Producción</button>}
           {usuario?.rol === 'veterinaria' && <button onClick={() => go('vet')}>Mi Panel</button>}
 
           {usuario ? <button onClick={salir}>Salir</button> : <button onClick={() => go('login')}>Portal</button>}
@@ -54,7 +58,7 @@ export default function Header({ page, setPage }) {
         <div className="mobile-bar">
           <div className="brand" onClick={() => go('home')}>
             <span className="brand-mark"><PawPrint size={18} /></span>
-            <strong>{configuracion.logoTexto || 'ELANPET.COM'}</strong>
+            <strong>{configuracion.logoTexto || configuracion.nombreSitio || 'ELANPET'}</strong>
           </div>
 
           <div className="mobile-actions">
@@ -78,6 +82,8 @@ export default function Header({ page, setPage }) {
             ))}
 
             {usuario?.rol === 'admin' && <button onClick={() => go('admin')}>Panel Admin</button>}
+            {usuario?.rol === 'admin' && <button onClick={() => go('produccion')}>Producción</button>}
+            {usuario?.rol === 'produccion' && <button onClick={() => go('produccion')}>Producción</button>}
             {usuario?.rol === 'veterinaria' && <button onClick={() => go('vet')}>Mi Panel</button>}
 
             {usuario ? <button onClick={salir}>Salir</button> : <button onClick={() => go('login')}>Portal</button>}

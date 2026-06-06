@@ -6,11 +6,11 @@ import { supabase } from '../lib/supabase';
 const AppContext = createContext(null);
 
 const configuracionInicial = {
-  nombreSitio: 'ELAN PET',
+  nombreSitio: 'ELANPET',
   slogan: 'Muebles funcionales para mascotas felices',
-  logoTexto: 'ELAN PET',
+  logoTexto: 'ELANPET',
   logo: '',
-  whatsapp: '+505 8888 8888',
+  whatsapp: '+505 8522 8183',
   correo: 'elansuministros@gmail.com',
   instagram: '@elanpet',
   colorPrincipal: '#1E5AA8',
@@ -23,11 +23,7 @@ const configuracionInicial = {
   anticipoPorcentaje: 60,
 };
 
-const cuentasIniciales = [
-  { id: 'cta-1', banco: 'BAC', titular: 'ELAN', numero: '000000000', moneda: 'Córdobas', activa: true, visible: true },
-  { id: 'cta-2', banco: 'LAFISE', titular: 'ELAN', numero: '000000000', moneda: 'Córdobas', activa: true, visible: true },
-  { id: 'cta-3', banco: 'BANPRO', titular: 'ELAN', numero: '000000000', moneda: 'Córdobas', activa: true, visible: true },
-];
+const cuentasIniciales = [];
 
 const bannersIniciales = [
   { id: 'slide-1', titulo: 'Muebles funcionales para mascotas felices', subtitulo: 'Casas, camas, comederos y torres fabricadas para durar.', ubicacion: 'slider-home', link: 'catalogo', activo: true, imagen: '/productos/producto-04.jpg' },
@@ -56,7 +52,7 @@ const usuariosIniciales = [
   {
     id: 'prod-1',
     usuario: 'produccion',
-    email: 'produccion@elanpet.com',
+    email: 'produccion@pet.elankav.com',
     password: 'ProdElan2026#Seguro',
     rol: 'produccion',
     activo: true,
@@ -125,6 +121,33 @@ function normalizarWhatsAppNicaragua(numero) {
   if (limpio.length === 8) return `505${limpio}`;
   if (limpio.startsWith('505') && limpio.length === 11) return limpio;
   return limpio;
+}
+
+
+function whatsappValidoNicaragua(numero) {
+  const limpio = normalizarWhatsAppNicaragua(numero);
+  return limpio.startsWith('505') && limpio.length === 11;
+}
+
+function esCuentaReal(cuenta) {
+  const numero = String(cuenta?.numero || '').replace(/[^0-9]/g, '');
+  return cuenta?.activa !== false && cuenta?.visible !== false && numero.length >= 6 && !/^0+$/.test(numero);
+}
+
+function asegurarUsuariosBase(listaUsuarios = []) {
+  const base = usuariosIniciales;
+  const existeAcceso = (lista, usuarioBase) =>
+    lista.some(
+      (u) =>
+        normalizarUsuario(u.usuario) === normalizarUsuario(usuarioBase.usuario) ||
+        normalizarUsuario(u.email) === normalizarUsuario(usuarioBase.email)
+    );
+
+  const salida = [...listaUsuarios];
+  base.forEach((usuarioBase) => {
+    if (!existeAcceso(salida, usuarioBase)) salida.push(usuarioBase);
+  });
+  return salida;
 }
 
 function mapVeterinariaFromDb(row) {
@@ -217,7 +240,7 @@ export function AppProvider({ children }) {
   const [carrito, setCarrito] = useState([]);
   const [pedidos, setPedidos] = useState(() => leerStorage('elanpet_pedidos', []));
   const [usuario, setUsuario] = useState(() => leerStorage('elanpet_usuario_actual', null));
-  const [usuarios, setUsuarios] = useState(() => leerStorage('elanpet_usuarios', usuariosIniciales));
+  const [usuarios, setUsuarios] = useState(() => asegurarUsuariosBase(leerStorage('elanpet_usuarios', usuariosIniciales)));
   const [supabaseListo, setSupabaseListo] = useState(false);
 
   useEffect(() => guardarStorage('elanpet_configuracion', configuracion), [configuracion]);
@@ -266,7 +289,7 @@ export function AppProvider({ children }) {
 
         if (usersError) throw usersError;
 
-        let users = (usersData || []).map(mapUsuarioFromDb);
+        let users = asegurarUsuariosBase((usersData || []).map(mapUsuarioFromDb));
 
         if (!activo) return;
 
@@ -306,6 +329,21 @@ export function AppProvider({ children }) {
       activo = false;
     };
   }, []);
+
+  const actualizarConfiguracion = (datos) => {
+    const nuevaConfiguracion = {
+      ...configuracionInicial,
+      ...configuracion,
+      ...datos,
+      nombreSitio: datos?.nombreSitio || configuracion?.nombreSitio || 'ELANPET',
+      logoTexto: datos?.logoTexto || datos?.nombreSitio || configuracion?.logoTexto || configuracion?.nombreSitio || 'ELANPET',
+      anticipoPorcentaje: Number(datos?.anticipoPorcentaje ?? configuracion?.anticipoPorcentaje ?? 60),
+    };
+
+    setConfiguracion(nuevaConfiguracion);
+    guardarStorage('elanpet_configuracion', nuevaConfiguracion);
+    return { ok: true, configuracion: nuevaConfiguracion };
+  };
 
   const crearImagen = (imagen) => setImagenes((prev) => [imagen, ...prev]);
   const eliminarImagen = (id) => setImagenes((prev) => prev.filter((img) => img.id !== id));
@@ -412,6 +450,10 @@ export function AppProvider({ children }) {
   const resumen = useMemo(() => resumenCarrito(carrito), [carrito]);
 
   const crearPedidoTransferencia = ({ cliente, pagoTipo = 'anticipo' }) => {
+    if (!whatsappValidoNicaragua(cliente?.whatsapp || cliente?.telefono)) {
+      throw new Error('whatsapp_invalido');
+    }
+
     const clienteNormalizado = {
       ...cliente,
       whatsapp: normalizarWhatsAppNicaragua(cliente?.whatsapp || cliente?.telefono),
@@ -427,7 +469,12 @@ export function AppProvider({ children }) {
       cliente: clienteNormalizado,
       veterinaria: veterinaria ? { ...veterinaria, linkAfiliado: `/v/${veterinaria.codigo || veterinaria.slug}` } : null,
       items: carrito,
-      resumen,
+      veterinariaId: veterinaria?.id || '',
+      veterinariaCodigo: veterinaria?.codigo || '',
+      resumen: {
+        ...resumen,
+        comision: veterinaria ? (Number(resumen.total || 0) * Number(veterinaria.comisionPorcentaje || 10)) / 100 : 0,
+      },
       pagoTipo,
       anticipoPorcentaje,
       montoSolicitado,
@@ -462,11 +509,12 @@ export function AppProvider({ children }) {
       pagoTipo: pagoTipoConfirmado,
       anticipoRecibido,
       saldoPendiente,
-      estado: esTotal ? 'pago_total_confirmado' : 'anticipo_confirmado',
-      estadoProduccion: 'pendiente',
+      estado: 'pago_validado',
+      estadoProduccion: 'produccion',
       pagoEstado: esTotal ? 'pago_total_confirmado' : 'anticipo_confirmado',
-      seguimientoEstado: 'en_produccion',
+      seguimientoEstado: 'produccion',
       comisionEstado: 'pendiente_entrega',
+      ordenTrabajo: crearOrdenTrabajoBase({ ...pedido, codigoSeguimiento: codigo, estadoProduccion: 'produccion' }),
       historial: [...(pedido.historial || []), { estado: esTotal ? 'pago_total_confirmado' : 'anticipo_confirmado', fecha: new Date().toISOString(), nota: 'Pago validado por administración.' }],
     });
     return codigo;
@@ -712,6 +760,7 @@ export function AppProvider({ children }) {
       value={{
         configuracion,
         setConfiguracion,
+        actualizarConfiguracion,
         cuentasBancarias,
         crearCuentaBancaria,
         actualizarCuentaBancaria,

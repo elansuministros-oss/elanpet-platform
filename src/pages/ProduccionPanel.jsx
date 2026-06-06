@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { Camera, ClipboardList, PackageCheck, Save } from 'lucide-react';
+import { Camera, ClipboardList, ExternalLink, PackageCheck, Save, Send, Video } from 'lucide-react';
 import { estadosProduccion, etiquetasEstado, useApp } from '../context/AppContext';
 
 const evidenciaLabels = {
-  inicial: 'Foto inicial',
-  proceso: 'Foto proceso',
-  terminado: 'Foto terminado',
-  entrega: 'Foto entrega',
+  inicial: 'Evidencia inicial',
+  proceso: 'Evidencia proceso',
+  terminado: 'Evidencia terminado',
+  entrega: 'Evidencia entrega',
 };
 
 const estadoDefault = 'pendiente';
+const seguimientoUrl = 'https://pet.elankav.com/seguimiento';
 
 function estadoPedido(pedido) {
   return pedido.estadoProduccion || pedido.ordenTrabajo?.estadoProduccion || estadoDefault;
@@ -23,7 +24,7 @@ function crearOTBase(pedido) {
       `OT-${String(pedido.codigoSeguimiento || pedido.numero || pedido.id || Date.now()).replace(/[^0-9]/g, '').slice(-6)}`,
     pedido: pedido.codigoSeguimiento || pedido.numero || '',
     cliente: pedido.cliente?.nombre || '',
-    veterinaria: pedido.veterinaria?.nombre || '',
+    veterinaria: pedido.veterinaria?.nombre || pedido.veterinariaNombre || '',
     producto: items.map((item) => item.nombre).join(', '),
     cantidad: items.reduce((total, item) => total + Number(item.cantidad || 0), 0),
     responsable: pedido.ordenTrabajo?.responsable || '',
@@ -47,6 +48,66 @@ function leerArchivoComoBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function normalizarEvidencia(valor) {
+  if (!valor) return null;
+  if (typeof valor === 'string') {
+    return {
+      url: valor,
+      tipo: valor.startsWith('data:video') ? 'video' : 'imagen',
+      mime: valor.slice(5, valor.indexOf(';')) || '',
+      nombre: 'Evidencia cargada',
+      fecha: '',
+    };
+  }
+  return {
+    url: valor.url || valor.dataUrl || valor.imagen || '',
+    tipo: valor.tipo || (String(valor.mime || '').startsWith('video') ? 'video' : 'imagen'),
+    mime: valor.mime || '',
+    nombre: valor.nombre || 'Evidencia cargada',
+    fecha: valor.fecha || valor.updatedAt || valor.createdAt || '',
+    estado: valor.estado || '',
+  };
+}
+
+function formatearFecha(fecha) {
+  if (!fecha) return '';
+  try {
+    return new Date(fecha).toLocaleString('es-NI', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return fecha;
+  }
+}
+
+function numeroWhatsApp(numero) {
+  const limpio = String(numero || '').replace(/[^0-9]/g, '');
+  if (limpio.length === 8) return `505${limpio}`;
+  return limpio;
+}
+
+function crearMensajeWhatsApp(pedido, estado) {
+  const codigo = pedido.codigoSeguimiento || pedido.numero || '';
+  const cliente = pedido.cliente?.nombre || 'cliente';
+  const estadoTexto = etiquetasEstado[estado] || estado || 'Actualizado';
+
+  return [
+    '🐾 ELANPET',
+    '',
+    `Hola ${cliente}.`,
+    '',
+    `Tu pedido ${codigo} fue actualizado.`,
+    '',
+    `Estado actual: ${estadoTexto}`,
+    '',
+    'Podés consultar el avance, fotos o videos desde:',
+    seguimientoUrl,
+    '',
+    `Código: ${codigo}`,
+  ].join('\n');
 }
 
 export default function ProduccionPanel() {
@@ -99,13 +160,49 @@ export default function ProduccionPanel() {
   const subirEvidencia = async (tipo, file) => {
     if (!pedidoActivo || !file) return;
 
-    try {
-      const imagen = await leerArchivoComoBase64(file);
-      guardarEvidenciaProduccion(pedidoActivo, tipo, imagen);
-      setMensaje(`${evidenciaLabels[tipo]} guardada.`);
-    } catch {
-      setMensaje('No se pudo cargar la imagen.');
+    const esImagen = file.type.startsWith('image/');
+    const esVideo = file.type.startsWith('video/');
+
+    if (!esImagen && !esVideo) {
+      setMensaje('Formato no permitido. Usá imagen o video.');
+      return;
     }
+
+    const maxMb = esVideo ? 25 : 8;
+    if (file.size > maxMb * 1024 * 1024) {
+      setMensaje(`Archivo muy pesado. Máximo recomendado: ${maxMb} MB.`);
+      return;
+    }
+
+    try {
+      const dataUrl = await leerArchivoComoBase64(file);
+      const evidencia = {
+        url: dataUrl,
+        tipo: esVideo ? 'video' : 'imagen',
+        mime: file.type,
+        nombre: file.name,
+        fecha: new Date().toISOString(),
+        estado: estadoPedido(pedidoActivo),
+      };
+
+      guardarEvidenciaProduccion(pedidoActivo, tipo, evidencia);
+      setMensaje(`${evidenciaLabels[tipo]} guardada. El cliente podrá verla en Seguimiento con su código.`);
+    } catch {
+      setMensaje('No se pudo cargar la evidencia.');
+    }
+  };
+
+  const notificarWhatsApp = () => {
+    if (!pedidoActivo) return;
+    const numero = numeroWhatsApp(pedidoActivo.cliente?.whatsapp || pedidoActivo.cliente?.telefono);
+    if (!numero) {
+      setMensaje('Este pedido no tiene WhatsApp válido para notificar.');
+      return;
+    }
+
+    const texto = encodeURIComponent(crearMensajeWhatsApp(pedidoActivo, estadoPedido(pedidoActivo)));
+    window.open(`https://wa.me/${numero}?text=${texto}`, '_blank', 'noopener,noreferrer');
+    setMensaje('Mensaje de WhatsApp preparado. No se envía la foto; el cliente la ve desde Seguimiento.');
   };
 
   if (!tieneAcceso) {
@@ -219,6 +316,15 @@ export default function ProduccionPanel() {
                   </label>
                 </div>
 
+                <div className="actions-row">
+                  <button type="button" className="btn-outline" onClick={notificarWhatsApp}>
+                    <Send size={17} /> Avisar por WhatsApp
+                  </button>
+                  <button type="button" className="btn-outline" onClick={() => window.open(seguimientoUrl, '_blank', 'noopener,noreferrer')}>
+                    <ExternalLink size={17} /> Abrir seguimiento
+                  </button>
+                </div>
+
                 <div className="estado-produccion-bar">
                   {estadosProduccion.map((estado) => (
                     <button
@@ -233,19 +339,34 @@ export default function ProduccionPanel() {
                 </div>
 
                 <section className="evidencias-grid">
-                  {Object.entries(evidenciaLabels).map(([tipo, label]) => (
-                    <article className="evidencia-card" key={tipo}>
-                      <h3>
-                        <Camera size={17} /> {label}
-                      </h3>
-                      {ot.evidencias?.[tipo] ? (
-                        <img src={ot.evidencias[tipo]} alt={label} />
-                      ) : (
-                        <div className="evidencia-placeholder">Sin imagen</div>
-                      )}
-                      <input type="file" accept="image/*" onChange={(e) => subirEvidencia(tipo, e.target.files?.[0])} />
-                    </article>
-                  ))}
+                  {Object.entries(evidenciaLabels).map(([tipo, label]) => {
+                    const evidencia = normalizarEvidencia(ot.evidencias?.[tipo]);
+                    return (
+                      <article className="evidencia-card" key={tipo}>
+                        <h3>
+                          {evidencia?.tipo === 'video' ? <Video size={17} /> : <Camera size={17} />} {label}
+                        </h3>
+
+                        {evidencia?.url ? (
+                          evidencia.tipo === 'video' ? (
+                            <video src={evidencia.url} controls playsInline style={{ width: '100%', borderRadius: 12, marginBottom: 10 }} />
+                          ) : (
+                            <img src={evidencia.url} alt={label} />
+                          )
+                        ) : (
+                          <div className="evidencia-placeholder">Sin evidencia</div>
+                        )}
+
+                        {evidencia?.fecha && <p className="note">Actualizado: {formatearFecha(evidencia.fecha)}</p>}
+
+                        <input
+                          type="file"
+                          accept="image/*,video/mp4,video/quicktime,video/webm"
+                          onChange={(e) => subirEvidencia(tipo, e.target.files?.[0])}
+                        />
+                      </article>
+                    );
+                  })}
                 </section>
 
                 {mensaje && (

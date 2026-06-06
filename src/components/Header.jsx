@@ -42,6 +42,7 @@ export default function Header({ page, setPage }) {
           ))}
 
           {usuario?.rol === 'admin' && <button onClick={() => go('admin')}>Admin</button>}
+          {usuario?.rol === 'admin' && <button onClick={() => go('crm')}>CRM</button>}
           {usuario?.rol === 'admin' && <button onClick={() => go('produccion')}>Producción</button>}
           {usuario?.rol === 'produccion' && <button onClick={() => go('produccion')}>Producción</button>}
           {usuario?.rol === 'veterinaria' && <button onClick={() => go('vet')}>Mi Panel</button>}
@@ -82,6 +83,7 @@ export default function Header({ page, setPage }) {
             ))}
 
             {usuario?.rol === 'admin' && <button onClick={() => go('admin')}>Panel Admin</button>}
+            {usuario?.rol === 'admin' && <button onClick={() => go('crm')}>CRM</button>}
             {usuario?.rol === 'admin' && <button onClick={() => go('produccion')}>Producción</button>}
             {usuario?.rol === 'produccion' && <button onClick={() => go('produccion')}>Producción</button>}
             {usuario?.rol === 'veterinaria' && <button onClick={() => go('vet')}>Mi Panel</button>}

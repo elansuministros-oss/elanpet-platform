@@ -1,3 +1,4 @@
+import CRM from './crm/App/CRM.jsx';
 import React, { useEffect, useState } from 'react';
 import Header from './components/Header';
 import Home from './pages/Home';
@@ -18,6 +19,7 @@ export default function App() {
   const pathInicial = window.location.pathname || '/';
 
   const paginaInicial = (() => {
+    if (pathInicial.startsWith('/crm')) return 'crm';
     if (pathInicial.startsWith('/seguimiento')) return 'seguimiento';
     if (pathInicial.startsWith('/login')) return 'login';
     if (pathInicial.startsWith('/admin')) return 'admin';
@@ -76,6 +78,10 @@ export default function App() {
       window.history.pushState({}, '', '/');
     }
 
+    if (destino === 'crm') {
+      window.history.pushState({}, '', '/crm');
+    }
+
     if (destino === 'seguimiento') {
       window.history.pushState({}, '', '/seguimiento');
     }
@@ -102,6 +108,7 @@ export default function App() {
       {page === 'trabajos' && <Trabajos />}
       {page === 'carrito' && <Carrito />}
       {page === 'contacto' && <Contacto />}
+      {page === 'crm' && <CRM />}
       {page === 'seguimiento' && <Seguimiento />}
       {page === 'login' && <Login setPage={ir} />}
       {page === 'landing-vet' && <LandingVeterinaria setPage={ir} />}

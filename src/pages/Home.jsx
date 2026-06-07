@@ -6,10 +6,6 @@ import { useApp } from '../context/AppContext';
 export default function Home({ setPage }) {
   const { banners } = useApp();
 
-  const bannersActivos = Array.isArray(banners)
-    ? banners.filter((banner) => banner?.activo)
-    : [];
-
   const normalizar = (valor = '') =>
     String(valor)
       .trim()
@@ -17,31 +13,49 @@ export default function Home({ setPage }) {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
 
-  const esHeroPrincipal = (banner) => {
+  const prioridadUbicacion = (banner) => {
     const ubicacion = normalizar(banner?.ubicacion);
-    return (
+
+    if (
       ubicacion === 'hero-principal' ||
       ubicacion === 'banner principal de portada' ||
       ubicacion === 'principal' ||
       ubicacion === 'portada'
-    );
+    ) {
+      return 1;
+    }
+
+    if (ubicacion === 'slider-home' || ubicacion === 'slider principal') {
+      return 2;
+    }
+
+    if (ubicacion === 'home' || ubicacion === 'inicio') {
+      return 3;
+    }
+
+    return 99;
   };
 
-  const esSliderHome = (banner) => {
-    const ubicacion = normalizar(banner?.ubicacion);
-    return ubicacion === 'slider-home' || ubicacion === 'slider principal';
+  const obtenerFecha = (banner) => {
+    const valor = banner?.actualizadoEn || banner?.createdAt || banner?.fecha || banner?.id || '';
+    const numero = Number(String(valor).replace(/\D/g, ''));
+    return Number.isFinite(numero) ? numero : 0;
   };
 
-  const esHome = (banner) => {
-    const ubicacion = normalizar(banner?.ubicacion);
-    return ubicacion === 'home' || ubicacion === 'inicio';
-  };
+  const bannersActivos = Array.isArray(banners)
+    ? banners
+        .filter((banner) => banner?.activo)
+        .sort((a, b) => {
+          const prioridadA = prioridadUbicacion(a);
+          const prioridadB = prioridadUbicacion(b);
 
-  const heroBanner =
-    bannersActivos.find(esHeroPrincipal) ||
-    bannersActivos.find(esSliderHome) ||
-    bannersActivos.find(esHome) ||
-    {};
+          if (prioridadA !== prioridadB) return prioridadA - prioridadB;
+
+          return obtenerFecha(b) - obtenerFecha(a);
+        })
+    : [];
+
+  const heroBanner = bannersActivos[0] || {};
 
   const heroTitulo = heroBanner.titulo || 'Tu mascota merece más';
 

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useCore } from '../../core/context/CoreContext';
 
 import DashboardCRM from '../DashboardCRM';
+import NotificacionesCRM from '../NotificacionesCRM';
 import Empresas from '../Empresas';
 import Contactos from '../Contactos';
 import Clientes from '../Clientes';
@@ -42,6 +43,7 @@ export default function CRM() {
         grupo: 'General',
         items: [
           { id: 'dashboard', label: 'Dashboard', icono: '📊', componente: <DashboardCRM /> },
+          { id: 'notificaciones', label: 'Notificaciones', icono: '🔔', componente: <NotificacionesCRM /> },
         ],
       },
       {

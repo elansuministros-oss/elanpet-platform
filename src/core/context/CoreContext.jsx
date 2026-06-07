@@ -19,6 +19,7 @@ const crearId = (prefijo) => `${prefijo}-${Date.now()}`;
 
 const MODULOS_CRM_PERMISOS = [
   { id: 'dashboard', label: 'Dashboard', grupo: 'General' },
+  { id: 'notificaciones', label: 'Notificaciones Internas', grupo: 'General' },
   { id: 'empresas', label: 'Empresas', grupo: 'CRM' },
   { id: 'contactos', label: 'Contactos', grupo: 'CRM' },
   { id: 'clientes', label: 'Clientes', grupo: 'CRM' },
@@ -73,6 +74,7 @@ const rolesCRMIniciales = [
     descripcion: 'Control ejecutivo, financiero, reportes y seguimiento operativo.',
     permisos: [
       'dashboard',
+      'notificaciones',
       'empresas',
       'contactos',
       'cotizaciones',
@@ -95,7 +97,7 @@ const rolesCRMIniciales = [
     id: 'rol-ventas',
     nombre: 'Ventas',
     descripcion: 'Gestión comercial: empresas, contactos, cotizaciones, pedidos y cobros básicos.',
-    permisos: ['dashboard', 'empresas', 'contactos', 'clientes', 'cotizaciones', 'pedidos', 'cobros'],
+    permisos: ['dashboard', 'notificaciones', 'empresas', 'contactos', 'clientes', 'cotizaciones', 'pedidos', 'cobros'],
     nivel: 'Operativo',
     estado: 'Activo',
   },
@@ -103,7 +105,7 @@ const rolesCRMIniciales = [
     id: 'rol-produccion',
     nombre: 'Producción',
     descripcion: 'Órdenes de trabajo, producción, inventario y materiales.',
-    permisos: ['dashboard', 'ordenes', 'produccion', 'inventario', 'materiales'],
+    permisos: ['dashboard', 'notificaciones', 'ordenes', 'produccion', 'inventario', 'materiales'],
     nivel: 'Operativo',
     estado: 'Activo',
   },
@@ -113,6 +115,7 @@ const rolesCRMIniciales = [
     descripcion: 'Compras, cuentas, cobros, flujo de caja, fiscal y reportes financieros.',
     permisos: [
       'dashboard',
+      'notificaciones',
       'compras',
       'cobros',
       'cuentas-cobrar',
@@ -247,6 +250,10 @@ export function CoreProvider({ children }) {
     leerStorage('elankav_auditoria_crm', [])
   );
 
+  const [notificacionesCRM, setNotificacionesCRM] = useState(() =>
+    leerStorage('elankav_notificaciones_crm', [])
+  );
+
 
   const [usuariosCRM, setUsuariosCRM] = useState(() =>
     leerStorage('elankav_usuarios_crm', usuariosCRMIniciales)
@@ -280,6 +287,7 @@ export function CoreProvider({ children }) {
   useEffect(() => guardarStorage('elankav_inventario', inventario), [inventario]);
   useEffect(() => guardarStorage('elankav_materiales', materiales), [materiales]);
   useEffect(() => guardarStorage('elankav_auditoria_crm', auditoriaCRM), [auditoriaCRM]);
+  useEffect(() => guardarStorage('elankav_notificaciones_crm', notificacionesCRM), [notificacionesCRM]);
 
   useEffect(() => guardarStorage('elankav_usuarios_crm', usuariosCRM), [usuariosCRM]);
   useEffect(() => guardarStorage('elankav_roles_crm', rolesCRM), [rolesCRM]);
@@ -1182,6 +1190,308 @@ export function CoreProvider({ children }) {
     });
   };
 
+
+  const normalizarTextoCRM = (valor = '') => String(valor || '').trim().toLowerCase();
+
+  const convertirNumeroCRM = (valor) => {
+    if (typeof valor === 'number' && Number.isFinite(valor)) return valor;
+    const limpio = String(valor ?? '').replace(/,/g, '').replace(/[^0-9.-]/g, '');
+    const numero = Number(limpio);
+    return Number.isFinite(numero) ? numero : 0;
+  };
+
+  const obtenerFechaCRM = (registro = {}, campos = []) => {
+    const campo = campos.find((nombre) => registro?.[nombre]);
+    if (!campo) return null;
+    const fecha = new Date(registro[campo]);
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+  };
+
+  const diasEntreCRM = (fechaObjetivo) => {
+    if (!fechaObjetivo) return null;
+    const hoy = new Date();
+    const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const inicioObjetivo = new Date(
+      fechaObjetivo.getFullYear(),
+      fechaObjetivo.getMonth(),
+      fechaObjetivo.getDate()
+    );
+    return Math.ceil((inicioObjetivo.getTime() - inicioHoy.getTime()) / 86400000);
+  };
+
+  const estaCerradoCRM = (estado = '') => {
+    const texto = normalizarTextoCRM(estado);
+    return ['pagado', 'pagada', 'cancelado', 'cancelada', 'cerrado', 'cerrada', 'completado', 'completada', 'finalizado', 'finalizada', 'entregado', 'entregada', 'recibido', 'recibida'].some((palabra) => texto.includes(palabra));
+  };
+
+  const crearNotificacionInternaCRM = ({
+    id,
+    tipo = 'Sistema',
+    prioridad = 'Media',
+    titulo = 'Notificación interna',
+    detalle = '',
+    modulo = 'Sistema',
+    unidadNegocio = 'Corporativo',
+    fechaObjetivo = null,
+    entidadId = '',
+    entidadTipo = '',
+    accionSugerida = 'Revisar',
+  }) => {
+    const registroManual = notificacionesCRM.find((item) => item.id === id);
+
+    return {
+      id,
+      tipo,
+      prioridad,
+      titulo,
+      detalle,
+      modulo,
+      unidadNegocio: unidadNegocio || 'Corporativo',
+      fechaObjetivo: fechaObjetivo ? fechaObjetivo.toISOString() : '',
+      entidadId,
+      entidadTipo,
+      accionSugerida,
+      leida: Boolean(registroManual?.leida),
+      archivada: Boolean(registroManual?.archivada),
+      fechaLectura: registroManual?.fechaLectura || '',
+      fechaRegistro: registroManual?.fechaRegistro || new Date().toISOString(),
+    };
+  };
+
+  const notificacionesInternasCRM = useMemo(() => {
+    const alertas = [];
+
+    cuentasPorCobrar.forEach((cuenta) => {
+      if (estaCerradoCRM(cuenta.estado)) return;
+
+      const fecha = obtenerFechaCRM(cuenta, ['fechaVencimiento', 'vencimiento', 'fechaLimite', 'fechaPago', 'fecha']);
+      const dias = diasEntreCRM(fecha);
+      const saldo = convertirNumeroCRM(cuenta.saldo ?? cuenta.pendiente ?? cuenta.montoPendiente ?? cuenta.total ?? cuenta.monto);
+
+      if (dias !== null && dias <= 7) {
+        alertas.push(
+          crearNotificacionInternaCRM({
+            id: `cxc-${cuenta.id}`,
+            tipo: dias < 0 ? 'Cobro vencido' : 'Cobro próximo',
+            prioridad: dias < 0 ? 'Alta' : 'Media',
+            titulo: dias < 0 ? 'Cuenta por cobrar vencida' : 'Cuenta por cobrar próxima',
+            detalle: `${cuenta.cliente || cuenta.empresa || cuenta.concepto || 'Cliente'} · Saldo estimado C$ ${saldo.toLocaleString('es-NI')} · ${dias < 0 ? `${Math.abs(dias)} día(s) vencida` : `vence en ${dias} día(s)`}`,
+            modulo: 'Cuentas por Cobrar',
+            unidadNegocio: cuenta.unidadNegocio || 'Corporativo',
+            fechaObjetivo: fecha,
+            entidadId: cuenta.id,
+            entidadTipo: 'cuenta_por_cobrar',
+            accionSugerida: 'Gestionar cobro',
+          })
+        );
+      }
+    });
+
+    cuentasPorPagar.forEach((cuenta) => {
+      if (estaCerradoCRM(cuenta.estado)) return;
+
+      const fecha = obtenerFechaCRM(cuenta, ['fechaVencimiento', 'vencimiento', 'fechaLimite', 'fechaPago', 'fecha']);
+      const dias = diasEntreCRM(fecha);
+      const saldo = convertirNumeroCRM(cuenta.saldo ?? cuenta.pendiente ?? cuenta.montoPendiente ?? cuenta.total ?? cuenta.monto);
+
+      if (dias !== null && dias <= 7) {
+        alertas.push(
+          crearNotificacionInternaCRM({
+            id: `cxp-${cuenta.id}`,
+            tipo: dias < 0 ? 'Pago vencido' : 'Pago próximo',
+            prioridad: dias < 0 ? 'Alta' : 'Media',
+            titulo: dias < 0 ? 'Cuenta por pagar vencida' : 'Cuenta por pagar próxima',
+            detalle: `${cuenta.proveedor || cuenta.empresa || cuenta.concepto || 'Proveedor'} · Saldo estimado C$ ${saldo.toLocaleString('es-NI')} · ${dias < 0 ? `${Math.abs(dias)} día(s) vencida` : `vence en ${dias} día(s)`}`,
+            modulo: 'Cuentas por Pagar',
+            unidadNegocio: cuenta.unidadNegocio || 'Corporativo',
+            fechaObjetivo: fecha,
+            entidadId: cuenta.id,
+            entidadTipo: 'cuenta_por_pagar',
+            accionSugerida: 'Programar pago',
+          })
+        );
+      }
+    });
+
+    produccion.forEach((item) => {
+      if (estaCerradoCRM(item.estado)) return;
+
+      const fecha = obtenerFechaCRM(item, ['fechaEntrega', 'fechaCompromiso', 'fechaFin', 'fechaVencimiento', 'entrega']);
+      const dias = diasEntreCRM(fecha);
+
+      if (dias !== null && dias < 0) {
+        alertas.push(
+          crearNotificacionInternaCRM({
+            id: `produccion-${item.id}`,
+            tipo: 'Producción atrasada',
+            prioridad: 'Alta',
+            titulo: 'Producción atrasada',
+            detalle: `${item.producto || item.proyecto || item.cliente || item.concepto || 'Producción'} · ${Math.abs(dias)} día(s) de atraso`,
+            modulo: 'Producción',
+            unidadNegocio: item.unidadNegocio || 'Corporativo',
+            fechaObjetivo: fecha,
+            entidadId: item.id,
+            entidadTipo: 'produccion',
+            accionSugerida: 'Revisar producción',
+          })
+        );
+      }
+    });
+
+    ordenesTrabajo.forEach((orden) => {
+      if (estaCerradoCRM(orden.estado)) return;
+
+      const fecha = obtenerFechaCRM(orden, ['fechaEntrega', 'fechaCompromiso', 'fechaFin', 'fechaVencimiento', 'entrega']);
+      const dias = diasEntreCRM(fecha);
+
+      if (dias !== null && dias < 0) {
+        alertas.push(
+          crearNotificacionInternaCRM({
+            id: `orden-${orden.id}`,
+            tipo: 'Orden atrasada',
+            prioridad: 'Alta',
+            titulo: 'Orden de trabajo atrasada',
+            detalle: `${orden.cliente || orden.proyecto || orden.concepto || orden.id} · ${Math.abs(dias)} día(s) de atraso`,
+            modulo: 'Órdenes de Trabajo',
+            unidadNegocio: orden.unidadNegocio || 'Corporativo',
+            fechaObjetivo: fecha,
+            entidadId: orden.id,
+            entidadTipo: 'orden_trabajo',
+            accionSugerida: 'Actualizar orden',
+          })
+        );
+      }
+    });
+
+    compras.forEach((compra) => {
+      if (estaCerradoCRM(compra.estado)) return;
+
+      const estado = normalizarTextoCRM(compra.estado);
+      const fecha = obtenerFechaCRM(compra, ['fechaEntrega', 'fechaRecepcion', 'fechaVencimiento', 'fecha']);
+      const dias = diasEntreCRM(fecha);
+      const esPendienteRecepcion = estado.includes('pendiente') || estado.includes('ordenada') || estado.includes('solicitada');
+
+      if (esPendienteRecepcion || (dias !== null && dias < 0)) {
+        alertas.push(
+          crearNotificacionInternaCRM({
+            id: `compra-${compra.id}`,
+            tipo: 'Compra pendiente',
+            prioridad: dias !== null && dias < 0 ? 'Alta' : 'Media',
+            titulo: 'Compra pendiente de recepción',
+            detalle: `${compra.proveedor || compra.concepto || compra.id} · ${dias !== null && dias < 0 ? `${Math.abs(dias)} día(s) de atraso` : 'requiere seguimiento'}`,
+            modulo: 'Compras',
+            unidadNegocio: compra.unidadNegocio || 'Corporativo',
+            fechaObjetivo: fecha,
+            entidadId: compra.id,
+            entidadTipo: 'compra',
+            accionSugerida: 'Confirmar recepción',
+          })
+        );
+      }
+    });
+
+    inventario.forEach((item) => {
+      const cantidad = convertirNumeroCRM(item.cantidad ?? item.stock ?? item.existencia ?? item.existencias);
+      const minimo = convertirNumeroCRM(item.stockMinimo ?? item.minimo ?? item.minimoStock ?? item.puntoReorden);
+      const debeAlertar = minimo > 0 ? cantidad <= minimo : cantidad <= 0;
+
+      if (debeAlertar) {
+        alertas.push(
+          crearNotificacionInternaCRM({
+            id: `inventario-${item.id}`,
+            tipo: 'Inventario bajo',
+            prioridad: cantidad <= 0 ? 'Alta' : 'Media',
+            titulo: cantidad <= 0 ? 'Inventario agotado' : 'Inventario bajo',
+            detalle: `${item.nombre || item.material || item.codigo || item.id} · existencia ${cantidad}${minimo > 0 ? ` / mínimo ${minimo}` : ''}`,
+            modulo: 'Inventario',
+            unidadNegocio: item.unidadNegocio || 'Corporativo',
+            entidadId: item.id,
+            entidadTipo: 'inventario',
+            accionSugerida: 'Reponer inventario',
+          })
+        );
+      }
+    });
+
+    return alertas
+      .filter((alerta) => !alerta.archivada)
+      .sort((a, b) => {
+        const pesoPrioridad = { Alta: 3, Media: 2, Baja: 1 };
+        const pesoA = pesoPrioridad[a.prioridad] || 0;
+        const pesoB = pesoPrioridad[b.prioridad] || 0;
+        if (pesoA !== pesoB) return pesoB - pesoA;
+        return String(a.fechaObjetivo || '').localeCompare(String(b.fechaObjetivo || ''));
+      });
+  }, [compras, cuentasPorCobrar, cuentasPorPagar, inventario, notificacionesCRM, ordenesTrabajo, produccion]);
+
+  const resumenNotificacionesCRM = useMemo(() => {
+    const total = notificacionesInternasCRM.length;
+    const noLeidas = notificacionesInternasCRM.filter((item) => !item.leida).length;
+    const altaPrioridad = notificacionesInternasCRM.filter((item) => item.prioridad === 'Alta').length;
+    const porUnidad = notificacionesInternasCRM.reduce((acc, item) => {
+      const unidad = item.unidadNegocio || 'Corporativo';
+      acc[unidad] = (acc[unidad] || 0) + 1;
+      return acc;
+    }, {});
+
+    return { total, noLeidas, altaPrioridad, porUnidad };
+  }, [notificacionesInternasCRM]);
+
+  const marcarNotificacionCRMLeida = (id) => {
+    setNotificacionesCRM((prev) => {
+      const existe = prev.some((item) => item.id === id);
+      if (existe) {
+        return prev.map((item) =>
+          item.id === id ? { ...item, leida: true, fechaLectura: new Date().toISOString() } : item
+        );
+      }
+      return [{ id, leida: true, archivada: false, fechaLectura: new Date().toISOString(), fechaRegistro: new Date().toISOString() }, ...prev];
+    });
+    registrarAuditoriaCRM({
+      modulo: 'Notificaciones',
+      accion: 'MARCAR_LEIDA',
+      detalle: `Notificación marcada como leída: ${id}`,
+      entidadId: id,
+      entidadTipo: 'notificacion',
+    });
+  };
+
+  const archivarNotificacionCRM = (id) => {
+    setNotificacionesCRM((prev) => {
+      const existe = prev.some((item) => item.id === id);
+      if (existe) {
+        return prev.map((item) =>
+          item.id === id ? { ...item, archivada: true, fechaArchivada: new Date().toISOString() } : item
+        );
+      }
+      return [{ id, leida: true, archivada: true, fechaArchivada: new Date().toISOString(), fechaRegistro: new Date().toISOString() }, ...prev];
+    });
+    registrarAuditoriaCRM({
+      modulo: 'Notificaciones',
+      accion: 'ARCHIVAR',
+      detalle: `Notificación archivada: ${id}`,
+      entidadId: id,
+      entidadTipo: 'notificacion',
+    });
+  };
+
+  const marcarTodasNotificacionesCRMLeidas = () => {
+    const fecha = new Date().toISOString();
+    setNotificacionesCRM((prev) => {
+      const mapa = new Map(prev.map((item) => [item.id, item]));
+      notificacionesInternasCRM.forEach((item) => {
+        mapa.set(item.id, { ...(mapa.get(item.id) || {}), id: item.id, leida: true, archivada: false, fechaLectura: fecha, fechaRegistro: mapa.get(item.id)?.fechaRegistro || fecha });
+      });
+      return Array.from(mapa.values());
+    });
+    registrarAuditoriaCRM({
+      modulo: 'Notificaciones',
+      accion: 'MARCAR_TODAS_LEIDAS',
+      detalle: 'Todas las notificaciones visibles fueron marcadas como leídas.',
+      entidadTipo: 'notificacion',
+    });
+  };
+
   const usuarioActivoCRM =
     usuariosCRM.find((usuario) => usuario.id === usuarioActivoCRMId) || usuariosCRMIniciales[0];
 
@@ -1218,6 +1528,9 @@ export function CoreProvider({ children }) {
       inventario,
       materiales,
       auditoriaCRM,
+      notificacionesCRM,
+      notificacionesInternasCRM,
+      resumenNotificacionesCRM,
       usuariosCRM,
       rolesCRM,
       usuarioActivoCRMId,
@@ -1311,6 +1624,9 @@ export function CoreProvider({ children }) {
       eliminarRolCRM,
       registrarAuditoriaCRM,
       limpiarAuditoriaCRM,
+      marcarNotificacionCRMLeida,
+      archivarNotificacionCRM,
+      marcarTodasNotificacionesCRMLeidas,
       usuarioTienePermisoCRM,
     }),
     [
@@ -1334,6 +1650,9 @@ export function CoreProvider({ children }) {
       inventario,
       materiales,
       auditoriaCRM,
+      notificacionesCRM,
+      notificacionesInternasCRM,
+      resumenNotificacionesCRM,
       usuariosCRM,
       rolesCRM,
       usuarioActivoCRMId,

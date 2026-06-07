@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useCore } from '../../core/context/CoreContext';
 
 import DashboardCRM from '../DashboardCRM';
 import Empresas from '../Empresas';
@@ -14,6 +15,9 @@ import Vendedores from '../Vendedores';
 import VeterinariasCRM from '../VeterinariasCRM';
 import Afiliados from '../Afiliados';
 import ReportesCRM from '../ReportesCRM';
+import FiscalCRM from '../FiscalCRM';
+import CentroUtilidades from '../CentroUtilidades';
+import EstadoFinanciero from '../EstadoFinanciero';
 
 import Pedidos from '../Pedidos';
 import Produccion from '../Produccion';
@@ -24,8 +28,11 @@ import Cotizaciones from '../Cotizaciones';
 import OrdenesTrabajo from '../OrdenesTrabajo';
 import Inventario from '../Inventario';
 import Materiales from '../Materiales';
+import UsuariosPermisos from '../UsuariosPermisos';
+import AuditoriaCRM from '../AuditoriaCRM';
 
 export default function CRM() {
+  const { usuarioActivoCRM, rolUsuarioActivoCRM, usuarioTienePermisoCRM } = useCore();
   const [modulo, setModulo] = useState('dashboard');
   const [menuAbierto, setMenuAbierto] = useState(false);
 
@@ -72,8 +79,11 @@ export default function CRM() {
           { id: 'cuentas-cobrar', label: 'Cuentas por Cobrar', icono: '📈', componente: <CuentasPorCobrar /> },
           { id: 'cuentas-pagar', label: 'Cuentas por Pagar', icono: '📉', componente: <CuentasPorPagar /> },
           { id: 'flujo-caja', label: 'Flujo de Caja', icono: '🏦', componente: <FlujoCaja /> },
+          { id: 'centro-utilidades', label: 'Centro Utilidades', icono: '📊', componente: <CentroUtilidades /> },
+          { id: 'estado-financiero', label: 'Estado Financiero', icono: '📘', componente: <EstadoFinanciero /> },
           { id: 'comisiones', label: 'Comisiones', icono: '💵', componente: <Comisiones /> },
           { id: 'reportes', label: 'Reportes', icono: '📈', componente: <ReportesCRM /> },
+          { id: 'fiscal', label: 'Fiscal', icono: '🧮', componente: <FiscalCRM /> },
         ],
       },
       {
@@ -83,12 +93,30 @@ export default function CRM() {
           { id: 'afiliados', label: 'Afiliados', icono: '🔗', componente: <Afiliados /> },
         ],
       },
+      {
+        grupo: 'Administración',
+        items: [
+          { id: 'usuarios-permisos', label: 'Usuarios y Permisos', icono: '🔐', componente: <UsuariosPermisos /> },
+          { id: 'auditoria', label: 'Auditoría', icono: '🧾', componente: <AuditoriaCRM /> },
+        ],
+      },
     ],
     []
   );
 
-  const listaModulos = modulos.flatMap((grupo) => grupo.items);
-  const moduloActivo = listaModulos.find((item) => item.id === modulo) || listaModulos[0];
+  const modulosVisibles = useMemo(
+    () =>
+      modulos
+        .map((grupo) => ({
+          ...grupo,
+          items: grupo.items.filter((item) => item.id === 'usuarios-permisos' || usuarioTienePermisoCRM(item.id)),
+        }))
+        .filter((grupo) => grupo.items.length > 0),
+    [modulos, usuarioTienePermisoCRM]
+  );
+
+  const listaModulos = modulosVisibles.flatMap((grupo) => grupo.items);
+  const moduloActivo = listaModulos.find((item) => item.id === modulo) || listaModulos[0] || modulos[0].items[0];
 
   const abrirModulo = (id) => {
     setModulo(id);
@@ -306,9 +334,10 @@ export default function CRM() {
         <div className="crm-brand">
           <h1>CRM CENTRAL ELANKAV</h1>
           <p>ERP operativo para ELANKAV GROUP</p>
+          <p>Usuario: {usuarioActivoCRM?.nombre || 'Administrador General'}</p>
         </div>
 
-        {modulos.map((grupo) => (
+        {modulosVisibles.map((grupo) => (
           <div className="crm-group" key={grupo.grupo}>
             <p className="crm-group-title">{grupo.grupo}</p>
 
@@ -339,7 +368,7 @@ export default function CRM() {
 
           <div className="crm-topbar-title">
             <h2>{moduloActivo.label}</h2>
-            <p>CRM Central conectado a la cadena operativa completa.</p>
+            <p>CRM Central conectado a la cadena operativa completa. Rol activo: {rolUsuarioActivoCRM?.nombre || 'Administrador General'}.</p>
           </div>
 
           <div className="crm-module-badge">

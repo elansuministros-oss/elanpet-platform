@@ -102,28 +102,52 @@ export const productosIniciales = [
 ];
 
 export const categoriasHome = [
-  { nombre: 'Casas', categoria: 'Casas para perros', icono: '🏠' },
-  { nombre: 'Comederos', categoria: 'Comederos', icono: '🍽️' },
-  { nombre: 'Camas', categoria: 'Camas', icono: '🛏️' },
-  { nombre: 'Escaleras', categoria: 'Escaleras', icono: '🪜' },
-  { nombre: 'Organizadores', categoria: 'Organizadores', icono: '📦' },
-  { nombre: 'Torres para gatos', categoria: 'Torres para gatos', icono: '🐱' },
+  {
+    nombre: 'Casas',
+    categoria: 'Casas para perros',
+    imagen: '/categorias/casas.png',
+    icono: '🏠',
+  },
+  {
+    nombre: 'Comederos',
+    categoria: 'Comederos',
+    imagen: '/categorias/comederos.png',
+    icono: '🍽️',
+  },
+  {
+    nombre: 'Camas',
+    categoria: 'Camas',
+    imagen: '/categorias/camas.png',
+    icono: '🛏️',
+  },
+  {
+    nombre: 'Escaleras',
+    categoria: 'Escaleras',
+    imagen: '/categorias/escaleras.png',
+    icono: '🪜',
+  },
+  {
+    nombre: 'Organizadores',
+    categoria: 'Organizadores',
+    imagen: '/categorias/organizadores.png',
+    icono: '📦',
+  },
+  {
+    nombre: 'Torres para gatos',
+    categoria: 'Torres para gatos',
+    imagen: '/categorias/torres-gatos.png',
+    icono: '🐱',
+  },
 ];
 
 export const veterinariaDemo = {
   codigo: 'VET001',
   nombre: 'Veterinaria Demo',
   slug: 'veterinaria-demo',
-
   whatsapp: '',
   correo: '',
-
   comision_porcentaje: 10,
-
-  linkAfiliado:
-    'https://elanpet.vercel.app/?vet=veterinaria-demo',
-
+  linkAfiliado: 'https://elanpet.vercel.app/?vet=veterinaria-demo',
   qr: '',
-
   activa: true,
 };

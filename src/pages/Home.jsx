@@ -95,7 +95,21 @@ export default function Home({ setPage }) {
               className="elanpet-category-card"
               onClick={() => setPage('catalogo')}
             >
-              <span>{cat.icono}</span>
+              {cat.imagen ? (
+                <img
+                  src={cat.imagen}
+                  alt={cat.nombre}
+                  className="elanpet-category-image"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                    const fallback = event.currentTarget.nextElementSibling;
+                    if (fallback) fallback.style.display = 'block';
+                  }}
+                />
+              ) : null}
+
+              <span style={{ display: cat.imagen ? 'none' : 'block' }}>{cat.icono}</span>
+
               <b>{cat.nombre}</b>
               <i><ArrowRight size={20} /></i>
             </button>

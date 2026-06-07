@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
+const UNIDADES_NEGOCIO = [
+  'ELANPET',
+  'ELANKAV VISUAL',
+  'ELANKAV CENTER',
+  'ELANKAV SOLAR',
+  'ELAN AI',
+];
+
 const fechaActual = () => new Date().toISOString().slice(0, 10);
 
 const formInicial = () => ({
@@ -16,6 +24,7 @@ const formInicial = () => ({
   cliente: '',
   telefono: '',
   producto: '',
+  unidadNegocio: 'ELANKAV VISUAL',
   cantidad: '',
   total: '',
   responsable: '',
@@ -101,6 +110,7 @@ export default function OrdenesTrabajo() {
           cliente: empresaNombre,
           telefono: pedidoSeleccionado.telefono || '',
           producto: pedidoSeleccionado.producto || '',
+          unidadNegocio: pedidoSeleccionado.unidadNegocio || 'ELANKAV VISUAL',
           cantidad: String(pedidoSeleccionado.cantidad || ''),
           total: String(pedidoSeleccionado.total || ''),
           descripcion: pedidoSeleccionado.producto || '',
@@ -156,6 +166,7 @@ export default function OrdenesTrabajo() {
         (pedidoSeleccionado ? obtenerEmpresaNombre(pedidoSeleccionado) : ''),
       telefono: form.telefono.trim(),
       producto: form.producto.trim(),
+      unidadNegocio: form.unidadNegocio,
       cantidad: Number(form.cantidad) || 0,
       total: Number(form.total) || 0,
       responsable: form.responsable.trim(),
@@ -211,6 +222,7 @@ export default function OrdenesTrabajo() {
         '',
       telefono: item.telefono || pedido?.telefono || '',
       producto: item.producto || pedido?.producto || '',
+      unidadNegocio: item.unidadNegocio || pedido?.unidadNegocio || 'ELANKAV VISUAL',
       cantidad: String(item.cantidad || pedido?.cantidad || ''),
       total: String(item.total || pedido?.total || ''),
       responsable: item.responsable || '',
@@ -238,8 +250,8 @@ export default function OrdenesTrabajo() {
     return {
       total: ordenesTrabajo.length,
       pendientes: ordenesTrabajo.filter((item) => item.estado === 'Pendiente').length,
-      proceso: ordenesTrabajo.filter((item) => item.estado === 'En proceso').length,
-      terminadas: ordenesTrabajo.filter((item) => item.estado === 'Terminada').length,
+      proceso: ordenesTrabajo.filter((item) => item.estado === 'En Proceso').length,
+      terminadas: ordenesTrabajo.filter((item) => item.estado === 'Finalizada').length,
     };
   }, [ordenesTrabajo]);
 
@@ -320,6 +332,18 @@ export default function OrdenesTrabajo() {
               placeholder="Contacto relacionado"
               readOnly={Boolean(form.pedidoId)}
             />
+          </label>
+
+
+          <label>
+            Unidad de negocio
+            <select name="unidadNegocio" value={form.unidadNegocio} onChange={cambiar}>
+              {UNIDADES_NEGOCIO.map((unidad) => (
+                <option key={unidad} value={unidad}>
+                  {unidad}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
@@ -405,9 +429,8 @@ export default function OrdenesTrabajo() {
             Estado
             <select name="estado" value={form.estado} onChange={cambiar}>
               <option value="Pendiente">Pendiente</option>
-              <option value="En proceso">En proceso</option>
-              <option value="Terminada">Terminada</option>
-              <option value="Entregada">Entregada</option>
+              <option value="En Proceso">En Proceso</option>
+              <option value="Finalizada">Finalizada</option>
               <option value="Cancelada">Cancelada</option>
             </select>
           </label>
@@ -501,6 +524,7 @@ export default function OrdenesTrabajo() {
               <th>Trabajo</th>
               <th>Responsable</th>
               <th>Prioridad</th>
+              <th>Unidad</th>
               <th>Estado</th>
               <th>Entrega</th>
               <th>Acciones</th>
@@ -517,6 +541,7 @@ export default function OrdenesTrabajo() {
                 <td>{item.producto || item.descripcion || 'Sin descripción'}</td>
                 <td>{item.responsable || 'Sin responsable'}</td>
                 <td>{item.prioridad || 'Media'}</td>
+                <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
                 <td>{item.estado || 'Pendiente'}</td>
                 <td>{item.fechaEntrega || 'Sin fecha'}</td>
                 <td>
@@ -536,7 +561,7 @@ export default function OrdenesTrabajo() {
 
             {ordenesTrabajo.length === 0 && (
               <tr>
-                <td colSpan="10">No hay órdenes de trabajo registradas.</td>
+                <td colSpan="11">No hay órdenes de trabajo registradas.</td>
               </tr>
             )}
           </tbody>

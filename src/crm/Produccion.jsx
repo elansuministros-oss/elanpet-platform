@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
+const UNIDADES_NEGOCIO = [
+  'ELANPET',
+  'ELANKAV VISUAL',
+  'ELANKAV CENTER',
+  'ELANKAV SOLAR',
+  'ELAN AI',
+];
+
 const fechaActual = () => new Date().toISOString().slice(0, 10);
 
 const formInicial = () => ({
@@ -18,6 +26,7 @@ const formInicial = () => ({
   cliente: '',
   telefono: '',
   producto: '',
+  unidadNegocio: 'ELANKAV VISUAL',
   cantidad: '',
   total: '',
   material: '',
@@ -111,6 +120,7 @@ export default function Produccion() {
           cliente: empresaNombre,
           telefono: ordenSeleccionada.telefono || '',
           producto: ordenSeleccionada.producto || ordenSeleccionada.descripcion || '',
+          unidadNegocio: ordenSeleccionada.unidadNegocio || 'ELANKAV VISUAL',
           cantidad: String(ordenSeleccionada.cantidad || ''),
           total: String(ordenSeleccionada.total || ''),
           material: materiales,
@@ -172,6 +182,7 @@ export default function Produccion() {
       cliente: formulario.cliente.trim() || empresaNombre,
       telefono: formulario.telefono.trim(),
       producto: formulario.producto.trim(),
+      unidadNegocio: formulario.unidadNegocio,
       cantidad: Number(formulario.cantidad) || 0,
       total: Number(formulario.total) || 0,
       material: formulario.material.trim(),
@@ -230,6 +241,7 @@ export default function Produccion() {
         '',
       telefono: orden.telefono || ordenTrabajo?.telefono || '',
       producto: orden.producto || ordenTrabajo?.producto || '',
+      unidadNegocio: orden.unidadNegocio || ordenTrabajo?.unidadNegocio || 'ELANKAV VISUAL',
       cantidad: String(orden.cantidad || ordenTrabajo?.cantidad || ''),
       total: String(orden.total || ordenTrabajo?.total || ''),
       material: orden.material || orden.materiales || ordenTrabajo?.materiales || '',
@@ -273,10 +285,10 @@ export default function Produccion() {
       total: produccion.length,
       pendientes: produccion.filter((orden) => orden.etapa === 'Pendiente')
         .length,
-      produccion: produccion.filter((orden) => orden.etapa === 'En producción')
+      produccion: produccion.filter((orden) => orden.etapa === 'Fabricando')
         .length,
-      listas: produccion.filter((orden) => orden.etapa === 'Lista').length,
-      entregadas: produccion.filter((orden) => orden.etapa === 'Entregada')
+      listas: produccion.filter((orden) => orden.etapa === 'Completado').length,
+      entregadas: produccion.filter((orden) => orden.etapa === 'Cancelado')
         .length,
     };
   }, [produccion]);
@@ -305,17 +317,17 @@ export default function Produccion() {
         </div>
 
         <div className="crm-stat-card">
-          <span>En producción</span>
+          <span>Fabricando</span>
           <strong>{resumen.produccion}</strong>
         </div>
 
         <div className="crm-stat-card">
-          <span>Listas</span>
+          <span>Completadas</span>
           <strong>{resumen.listas}</strong>
         </div>
 
         <div className="crm-stat-card">
-          <span>Entregadas</span>
+          <span>Canceladas</span>
           <strong>{resumen.entregadas}</strong>
         </div>
       </div>
@@ -372,6 +384,22 @@ export default function Produccion() {
               placeholder="Contacto relacionado"
               readOnly={Boolean(formulario.ordenTrabajoId)}
             />
+          </label>
+
+
+          <label>
+            Unidad de negocio
+            <select
+              name="unidadNegocio"
+              value={formulario.unidadNegocio}
+              onChange={cambiarFormulario}
+            >
+              {UNIDADES_NEGOCIO.map((unidad) => (
+                <option key={unidad} value={unidad}>
+                  {unidad}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
@@ -481,17 +509,10 @@ export default function Produccion() {
               onChange={cambiarFormulario}
             >
               <option>Pendiente</option>
-              <option>Diseño</option>
-              <option>Materiales</option>
-              <option>Corte</option>
-              <option>Impresión</option>
-              <option>Armado</option>
+              <option>Fabricando</option>
               <option>Instalación</option>
-              <option>En producción</option>
-              <option>Lista</option>
-              <option>Entregada</option>
-              <option>Detenida</option>
-              <option>Cancelada</option>
+              <option>Completado</option>
+              <option>Cancelado</option>
             </select>
           </label>
 
@@ -591,6 +612,7 @@ export default function Produccion() {
                   <th>Responsable</th>
                   <th>Entrega</th>
                   <th>Etapa</th>
+                  <th>Unidad</th>
                   <th>Avance</th>
                   <th>Acciones</th>
                 </tr>
@@ -612,6 +634,7 @@ export default function Produccion() {
                       <td>{orden.responsable || 'Sin asignar'}</td>
                       <td>{orden.fechaEntrega || 'Sin fecha'}</td>
                       <td>{orden.etapa || 'Pendiente'}</td>
+                      <td>{orden.unidadNegocio || 'ELANKAV VISUAL'}</td>
                       <td>{orden.avance || 0}%</td>
                       <td>
                         <div className="crm-row-actions">
@@ -631,7 +654,7 @@ export default function Produccion() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="12">
+                    <td colSpan="13">
                       No hay órdenes de producción registradas.
                     </td>
                   </tr>

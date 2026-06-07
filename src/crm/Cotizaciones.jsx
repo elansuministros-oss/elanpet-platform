@@ -1,31 +1,35 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
-export default function Cotizaciones() {
-  const {
-    cotizaciones,
-    crearCotizacion,
-    actualizarCotizacion,
-    eliminarCotizacion,
-  } = useCore();
+const UNIDADES_NEGOCIO = [
+  'ELANPET',
+  'ELANKAV VISUAL',
+  'ELANKAV CENTER',
+  'ELANKAV SOLAR',
+  'ELAN AI',
+];
 
+export default function Comisiones() {
+  const {
+    comisiones,
+    crearComision,
+    actualizarComision,
+    eliminarComision,
+  } = useCore();
   const [editandoId, setEditandoId] = useState(null);
 
   const [form, setForm] = useState({
     codigo: '',
+    vendedor: '',
     cliente: '',
     empresa: '',
-    contacto: '',
-    descripcion: '',
-    categoria: 'Rotulación',
-    moneda: 'C$',
-    subtotal: '',
-    iva: '15',
-    descuento: '',
-    total: '',
-    estado: 'Borrador',
+    pedido: '',
+    unidadNegocio: 'ELANKAV VISUAL',
+    ventaTotal: '',
+    porcentaje: '10',
+    comision: '',
+    estado: 'Pendiente',
     fecha: new Date().toISOString().slice(0, 10),
-    vencimiento: '',
     observaciones: '',
   });
 
@@ -35,14 +39,12 @@ export default function Cotizaciones() {
     setForm((prev) => {
       const nuevo = { ...prev, [name]: value };
 
-      const subtotal = Number(nuevo.subtotal) || 0;
-      const iva = Number(nuevo.iva) || 0;
-      const descuento = Number(nuevo.descuento) || 0;
-      const totalCalculado = subtotal + subtotal * (iva / 100) - descuento;
+      const venta = Number(nuevo.ventaTotal) || 0;
+      const porcentaje = Number(nuevo.porcentaje) || 0;
 
       return {
         ...nuevo,
-        total: totalCalculado > 0 ? totalCalculado.toFixed(2) : '',
+        comision: ((venta * porcentaje) / 100).toFixed(2),
       };
     });
   };
@@ -50,19 +52,16 @@ export default function Cotizaciones() {
   const limpiar = () => {
     setForm({
       codigo: '',
+      vendedor: '',
       cliente: '',
       empresa: '',
-      contacto: '',
-      descripcion: '',
-      categoria: 'Rotulación',
-      moneda: 'C$',
-      subtotal: '',
-      iva: '15',
-      descuento: '',
-      total: '',
-      estado: 'Borrador',
+      pedido: '',
+      unidadNegocio: 'ELANKAV VISUAL',
+      ventaTotal: '',
+      porcentaje: '10',
+      comision: '',
+      estado: 'Pendiente',
       fecha: new Date().toISOString().slice(0, 10),
-      vencimiento: '',
       observaciones: '',
     });
 
@@ -72,30 +71,28 @@ export default function Cotizaciones() {
   const guardar = (e) => {
     e.preventDefault();
 
-    if (!form.cliente.trim() && !form.empresa.trim()) return;
+    if (!form.vendedor.trim()) return;
 
     const datos = {
-      codigo: form.codigo.trim() || `COT-${Date.now()}`,
+      ...form,
+      id: editandoId || `com-${Date.now()}`,
+      codigo: form.codigo.trim() || `COM-${Date.now()}`,
+      vendedor: form.vendedor.trim(),
       cliente: form.cliente.trim(),
       empresa: form.empresa.trim(),
-      contacto: form.contacto.trim(),
-      descripcion: form.descripcion.trim(),
-      categoria: form.categoria,
-      moneda: form.moneda,
-      subtotal: Number(form.subtotal) || 0,
-      iva: Number(form.iva) || 0,
-      descuento: Number(form.descuento) || 0,
-      total: Number(form.total) || 0,
-      estado: form.estado,
-      fecha: form.fecha,
-      vencimiento: form.vencimiento,
+      pedido: form.pedido.trim(),
+      unidadNegocio: form.unidadNegocio || 'ELANKAV VISUAL',
       observaciones: form.observaciones.trim(),
+      ventaTotal: Number(form.ventaTotal) || 0,
+      porcentaje: Number(form.porcentaje) || 0,
+      comision: Number(form.comision) || 0,
+      actualizado: new Date().toISOString(),
     };
 
     if (editandoId) {
-      actualizarCotizacion(editandoId, datos);
+      actualizarComision(datos);
     } else {
-      crearCotizacion(datos);
+      crearComision(datos);
     }
 
     limpiar();
@@ -106,73 +103,72 @@ export default function Cotizaciones() {
 
     setForm({
       codigo: item.codigo || '',
+      vendedor: item.vendedor || '',
       cliente: item.cliente || '',
       empresa: item.empresa || '',
-      contacto: item.contacto || '',
-      descripcion: item.descripcion || '',
-      categoria: item.categoria || 'Rotulación',
-      moneda: item.moneda || 'C$',
-      subtotal: String(item.subtotal || ''),
-      iva: String(item.iva || '15'),
-      descuento: String(item.descuento || ''),
-      total: String(item.total || ''),
-      estado: item.estado || 'Borrador',
-      fecha: item.fecha || new Date().toISOString().slice(0, 10),
-      vencimiento: item.vencimiento || '',
+      pedido: item.pedido || '',
+      unidadNegocio: item.unidadNegocio || 'ELANKAV VISUAL',
+      ventaTotal: String(item.ventaTotal || ''),
+      porcentaje: String(item.porcentaje || '10'),
+      comision: String(item.comision || ''),
+      estado: item.estado || 'Pendiente',
+      fecha: item.fecha || '',
       observaciones: item.observaciones || '',
     });
   };
 
   const eliminar = (id) => {
-    eliminarCotizacion(id);
+    eliminarComision(id);
+
     if (editandoId === id) limpiar();
   };
 
   const resumen = useMemo(() => {
-    const totalGeneral = cotizaciones.reduce(
-      (acc, item) => acc + (Number(item.total) || 0),
+    const ventas = comisiones.reduce(
+      (acc, item) => acc + (Number(item.ventaTotal) || 0),
       0
     );
 
-    const aprobadas = cotizaciones.filter(
-      (item) => item.estado === 'Aprobada'
-    ).length;
+    const totalComisiones = comisiones.reduce(
+      (acc, item) => acc + (Number(item.comision) || 0),
+      0
+    );
 
-    const pendientes = cotizaciones.filter(
-      (item) => item.estado === 'Enviada' || item.estado === 'En revisión'
+    const pendientes = comisiones.filter(
+      (item) => item.estado === 'Pendiente'
     ).length;
 
     return {
-      cantidad: cotizaciones.length,
-      totalGeneral,
-      aprobadas,
+      totalRegistros: comisiones.length,
+      ventas,
+      totalComisiones,
       pendientes,
     };
-  }, [cotizaciones]);
+  }, [comisiones]);
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h2>Cotizaciones</h2>
-          <p>Registro y control de cotizaciones del CRM Central ELANKAV.</p>
+          <h2>Comisiones</h2>
+          <p>Control de comisiones para vendedores, afiliados y aliados.</p>
         </div>
       </div>
 
       <div className="crm-resumen">
         <div className="crm-card">
-          <span>Total cotizaciones</span>
-          <strong>{resumen.cantidad}</strong>
+          <span>Registros</span>
+          <strong>{resumen.totalRegistros}</strong>
         </div>
 
         <div className="crm-card">
-          <span>Monto cotizado</span>
-          <strong>C$ {resumen.totalGeneral.toFixed(2)}</strong>
+          <span>Ventas</span>
+          <strong>C$ {resumen.ventas.toFixed(2)}</strong>
         </div>
 
         <div className="crm-card">
-          <span>Aprobadas</span>
-          <strong>{resumen.aprobadas}</strong>
+          <span>Comisiones</span>
+          <strong>C$ {resumen.totalComisiones.toFixed(2)}</strong>
         </div>
 
         <div className="crm-card">
@@ -182,7 +178,7 @@ export default function Cotizaciones() {
       </div>
 
       <form className="crm-form" onSubmit={guardar}>
-        <h3>{editandoId ? 'Editar cotización' : 'Nueva cotización'}</h3>
+        <h3>{editandoId ? 'Editar comisión' : 'Nueva comisión'}</h3>
 
         <div className="form-grid">
           <label>
@@ -191,7 +187,16 @@ export default function Cotizaciones() {
               name="codigo"
               value={form.codigo}
               onChange={cambiar}
-              placeholder="COT-0001"
+              placeholder="COM-0001"
+            />
+          </label>
+
+          <label>
+            Vendedor
+            <input
+              name="vendedor"
+              value={form.vendedor}
+              onChange={cambiar}
             />
           </label>
 
@@ -201,7 +206,6 @@ export default function Cotizaciones() {
               name="cliente"
               value={form.cliente}
               onChange={cambiar}
-              placeholder="Nombre del cliente"
             />
           </label>
 
@@ -211,84 +215,75 @@ export default function Cotizaciones() {
               name="empresa"
               value={form.empresa}
               onChange={cambiar}
-              placeholder="Empresa relacionada"
             />
           </label>
 
           <label>
-            Contacto
+            Pedido
             <input
-              name="contacto"
-              value={form.contacto}
+              name="pedido"
+              value={form.pedido}
               onChange={cambiar}
-              placeholder="Persona de contacto"
+              placeholder="PED-0001"
             />
           </label>
 
           <label>
-            Categoría
-            <select name="categoria" value={form.categoria} onChange={cambiar}>
-              <option>Rotulación</option>
-              <option>Impresión digital</option>
-              <option>Arquitectura comercial</option>
-              <option>ELANPET</option>
-              <option>ELAN Suministros</option>
-              <option>ELANKAV Solar</option>
-              <option>ABADON</option>
-              <option>Proyecto especial</option>
+            Unidad de negocio
+            <select
+              name="unidadNegocio"
+              value={form.unidadNegocio}
+              onChange={cambiar}
+            >
+              {UNIDADES_NEGOCIO.map((unidad) => (
+                <option key={unidad} value={unidad}>
+                  {unidad}
+                </option>
+              ))}
             </select>
           </label>
 
           <label>
-            Moneda
-            <select name="moneda" value={form.moneda} onChange={cambiar}>
-              <option>C$</option>
-              <option>$</option>
+            Venta total
+            <input
+              type="number"
+              name="ventaTotal"
+              value={form.ventaTotal}
+              onChange={cambiar}
+            />
+          </label>
+
+          <label>
+            %
+            <input
+              type="number"
+              name="porcentaje"
+              value={form.porcentaje}
+              onChange={cambiar}
+            />
+          </label>
+
+          <label>
+            Comisión
+            <input
+              type="number"
+              name="comision"
+              value={form.comision}
+              readOnly
+            />
+          </label>
+
+          <label>
+            Estado
+            <select
+              name="estado"
+              value={form.estado}
+              onChange={cambiar}
+            >
+              <option>Pendiente</option>
+              <option>Pagada</option>
+              <option>Anulada</option>
             </select>
-          </label>
-
-          <label>
-            Subtotal
-            <input
-              type="number"
-              name="subtotal"
-              value={form.subtotal}
-              onChange={cambiar}
-              placeholder="0.00"
-            />
-          </label>
-
-          <label>
-            IVA %
-            <input
-              type="number"
-              name="iva"
-              value={form.iva}
-              onChange={cambiar}
-              placeholder="15"
-            />
-          </label>
-
-          <label>
-            Descuento
-            <input
-              type="number"
-              name="descuento"
-              value={form.descuento}
-              onChange={cambiar}
-              placeholder="0.00"
-            />
-          </label>
-
-          <label>
-            Total
-            <input
-              type="number"
-              name="total"
-              value={form.total}
-              onChange={cambiar}
-              placeholder="0.00"
-            />
           </label>
 
           <label>
@@ -300,40 +295,7 @@ export default function Cotizaciones() {
               onChange={cambiar}
             />
           </label>
-
-          <label>
-            Vencimiento
-            <input
-              type="date"
-              name="vencimiento"
-              value={form.vencimiento}
-              onChange={cambiar}
-            />
-          </label>
-
-          <label>
-            Estado
-            <select name="estado" value={form.estado} onChange={cambiar}>
-              <option>Borrador</option>
-              <option>Enviada</option>
-              <option>En revisión</option>
-              <option>Aprobada</option>
-              <option>Rechazada</option>
-              <option>Convertida a pedido</option>
-            </select>
-          </label>
         </div>
-
-        <label>
-          Descripción del trabajo
-          <textarea
-            name="descripcion"
-            value={form.descripcion}
-            onChange={cambiar}
-            placeholder="Detalle técnico, medidas, materiales, instalación o alcance del proyecto"
-            rows="4"
-          />
-        </label>
 
         <label>
           Observaciones
@@ -341,18 +303,21 @@ export default function Cotizaciones() {
             name="observaciones"
             value={form.observaciones}
             onChange={cambiar}
-            placeholder="Condiciones de pago, tiempos de entrega, notas internas"
             rows="3"
           />
         </label>
 
         <div className="form-actions">
           <button type="submit">
-            {editandoId ? 'Actualizar cotización' : 'Guardar cotización'}
+            {editandoId ? 'Actualizar comisión' : 'Guardar comisión'}
           </button>
 
           {editandoId && (
-            <button type="button" onClick={limpiar} className="btn-secundario">
+            <button
+              type="button"
+              onClick={limpiar}
+              className="btn-secundario"
+            >
               Cancelar edición
             </button>
           )}
@@ -364,37 +329,52 @@ export default function Cotizaciones() {
           <thead>
             <tr>
               <th>Código</th>
-              <th>Cliente / Empresa</th>
-              <th>Categoría</th>
-              <th>Total</th>
-              <th>Fecha</th>
+              <th>Vendedor</th>
+              <th>Cliente</th>
+              <th>Unidad</th>
+              <th>Venta</th>
+              <th>%</th>
+              <th>Comisión</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
 
           <tbody>
-            {cotizaciones.length === 0 ? (
+            {comisiones.length === 0 ? (
               <tr>
-                <td colSpan="7">No hay cotizaciones registradas.</td>
+                <td colSpan="9">No hay comisiones registradas.</td>
               </tr>
             ) : (
-              cotizaciones.map((item) => (
+              comisiones.map((item) => (
                 <tr key={item.id}>
                   <td>{item.codigo}</td>
+
+                  <td>{item.vendedor}</td>
+
+                  <td>{item.cliente || item.empresa}</td>
+
+                  <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
+
                   <td>
-                    <strong>{item.cliente || item.empresa}</strong>
-                    <br />
-                    <small>{item.empresa}</small>
+                    C$ {Number(item.ventaTotal || 0).toFixed(2)}
                   </td>
-                  <td>{item.categoria}</td>
+
                   <td>
-                    {item.moneda} {Number(item.total || 0).toFixed(2)}
+                    {Number(item.porcentaje || 0).toFixed(2)}%
                   </td>
-                  <td>{item.fecha}</td>
+
+                  <td>
+                    C$ {Number(item.comision || 0).toFixed(2)}
+                  </td>
+
                   <td>{item.estado}</td>
+
                   <td>
-                    <button type="button" onClick={() => editar(item)}>
+                    <button
+                      type="button"
+                      onClick={() => editar(item)}
+                    >
                       Editar
                     </button>
 

@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
+const UNIDADES_NEGOCIO = [
+  'ELANPET',
+  'ELANKAV VISUAL',
+  'ELANKAV CENTER',
+  'ELANKAV SOLAR',
+  'ELAN AI',
+];
+
 export default function Cobros() {
   const {
     cobros,
@@ -15,6 +23,7 @@ export default function Cobros() {
     cliente: '',
     empresa: '',
     factura: '',
+    unidadNegocio: 'ELANKAV VISUAL',
     montoFactura: '',
     montoCobrado: '',
     saldoPendiente: '',
@@ -46,6 +55,7 @@ export default function Cobros() {
       cliente: '',
       empresa: '',
       factura: '',
+      unidadNegocio: 'ELANKAV VISUAL',
       montoFactura: '',
       montoCobrado: '',
       saldoPendiente: '',
@@ -70,6 +80,7 @@ export default function Cobros() {
       cliente: form.cliente.trim(),
       empresa: form.empresa.trim(),
       factura: form.factura.trim(),
+      unidadNegocio: form.unidadNegocio,
       observaciones: form.observaciones.trim(),
       montoFactura: Number(form.montoFactura) || 0,
       montoCobrado: Number(form.montoCobrado) || 0,
@@ -94,6 +105,7 @@ export default function Cobros() {
       cliente: item.cliente || '',
       empresa: item.empresa || '',
       factura: item.factura || '',
+      unidadNegocio: item.unidadNegocio || 'ELANKAV VISUAL',
       montoFactura: String(item.montoFactura || ''),
       montoCobrado: String(item.montoCobrado || ''),
       saldoPendiente: String(item.saldoPendiente || ''),
@@ -202,6 +214,18 @@ export default function Cobros() {
             />
           </label>
 
+
+          <label>
+            Unidad de negocio
+            <select name="unidadNegocio" value={form.unidadNegocio} onChange={cambiar}>
+              {UNIDADES_NEGOCIO.map((unidad) => (
+                <option key={unidad} value={unidad}>
+                  {unidad}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label>
             Monto factura
             <input
@@ -257,7 +281,7 @@ export default function Cobros() {
               <option>Pendiente</option>
               <option>Parcial</option>
               <option>Pagado</option>
-              <option>Vencido</option>
+              <option>Anulado</option>
             </select>
           </label>
 
@@ -306,6 +330,7 @@ export default function Cobros() {
               <th>Código</th>
               <th>Cliente</th>
               <th>Factura</th>
+              <th>Unidad</th>
               <th>Facturado</th>
               <th>Cobrado</th>
               <th>Saldo</th>
@@ -317,7 +342,7 @@ export default function Cobros() {
           <tbody>
             {cobros.length === 0 ? (
               <tr>
-                <td colSpan="8">No hay cobros registrados.</td>
+                <td colSpan="9">No hay cobros registrados.</td>
               </tr>
             ) : (
               cobros.map((item) => (
@@ -325,6 +350,7 @@ export default function Cobros() {
                   <td>{item.codigo}</td>
                   <td>{item.cliente || item.empresa}</td>
                   <td>{item.factura}</td>
+                  <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
                   <td>C$ {Number(item.montoFactura).toFixed(2)}</td>
                   <td>C$ {Number(item.montoCobrado).toFixed(2)}</td>
                   <td>C$ {Number(item.saldoPendiente).toFixed(2)}</td>

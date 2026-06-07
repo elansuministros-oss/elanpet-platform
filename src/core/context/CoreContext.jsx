@@ -62,6 +62,26 @@ export function CoreProvider({ children }) {
     leerStorage('elankav_afiliados', [])
   );
 
+  const [proveedores, setProveedores] = useState(() =>
+    leerStorage('elankav_proveedores', [])
+  );
+
+  const [compras, setCompras] = useState(() =>
+    leerStorage('elankav_compras', [])
+  );
+
+  const [cuentasPorPagar, setCuentasPorPagar] = useState(() =>
+    leerStorage('elankav_cuentas_por_pagar', [])
+  );
+
+  const [cuentasPorCobrar, setCuentasPorCobrar] = useState(() =>
+    leerStorage('elankav_cuentas_por_cobrar', [])
+  );
+
+  const [flujoCaja, setFlujoCaja] = useState(() =>
+    leerStorage('elankav_flujo_caja', [])
+  );
+
   const [cotizaciones, setCotizaciones] = useState(() =>
     leerStorage('elankav_cotizaciones', [])
   );
@@ -100,6 +120,11 @@ export function CoreProvider({ children }) {
   useEffect(() => guardarStorage('elankav_vendedores', vendedores), [vendedores]);
   useEffect(() => guardarStorage('elankav_veterinarias', veterinarias), [veterinarias]);
   useEffect(() => guardarStorage('elankav_afiliados', afiliados), [afiliados]);
+  useEffect(() => guardarStorage('elankav_proveedores', proveedores), [proveedores]);
+  useEffect(() => guardarStorage('elankav_compras', compras), [compras]);
+  useEffect(() => guardarStorage('elankav_cuentas_por_pagar', cuentasPorPagar), [cuentasPorPagar]);
+  useEffect(() => guardarStorage('elankav_cuentas_por_cobrar', cuentasPorCobrar), [cuentasPorCobrar]);
+  useEffect(() => guardarStorage('elankav_flujo_caja', flujoCaja), [flujoCaja]);
   useEffect(() => guardarStorage('elankav_cotizaciones', cotizaciones), [cotizaciones]);
   useEffect(() => guardarStorage('elankav_pedidos', pedidos), [pedidos]);
   useEffect(() => guardarStorage('elankav_ordenes_trabajo', ordenesTrabajo), [ordenesTrabajo]);
@@ -184,6 +209,66 @@ export function CoreProvider({ children }) {
 
   const eliminarAfiliado = (id) => {
     setAfiliados((prev) => eliminarDeLista(prev, id));
+  };
+
+  const crearProveedor = (datos) => {
+    setProveedores((prev) => [crearRegistro('proveedor', datos), ...prev]);
+  };
+
+  const actualizarProveedor = (id, datos) => {
+    setProveedores((prev) => actualizarLista(prev, id, datos));
+  };
+
+  const eliminarProveedor = (id) => {
+    setProveedores((prev) => eliminarDeLista(prev, id));
+  };
+
+  const crearCompra = (datos) => {
+    setCompras((prev) => [crearRegistro('compra', datos), ...prev]);
+  };
+
+  const actualizarCompra = (id, datos) => {
+    setCompras((prev) => actualizarLista(prev, id, datos));
+  };
+
+  const eliminarCompra = (id) => {
+    setCompras((prev) => eliminarDeLista(prev, id));
+  };
+
+  const crearCuentaPorPagar = (datos) => {
+    setCuentasPorPagar((prev) => [crearRegistro('cuenta-pagar', datos), ...prev]);
+  };
+
+  const actualizarCuentaPorPagar = (id, datos) => {
+    setCuentasPorPagar((prev) => actualizarLista(prev, id, datos));
+  };
+
+  const eliminarCuentaPorPagar = (id) => {
+    setCuentasPorPagar((prev) => eliminarDeLista(prev, id));
+  };
+
+  const crearCuentaPorCobrar = (datos) => {
+    setCuentasPorCobrar((prev) => [crearRegistro('cuenta-cobrar', datos), ...prev]);
+  };
+
+  const actualizarCuentaPorCobrar = (id, datos) => {
+    setCuentasPorCobrar((prev) => actualizarLista(prev, id, datos));
+  };
+
+  const eliminarCuentaPorCobrar = (id) => {
+    setCuentasPorCobrar((prev) => eliminarDeLista(prev, id));
+  };
+
+  const crearMovimientoFlujoCaja = (datos) => {
+    setFlujoCaja((prev) => [crearRegistro('flujo-caja', datos), ...prev]);
+  };
+
+  const actualizarMovimientoFlujoCaja = (id, datos) => {
+    setFlujoCaja((prev) => actualizarLista(prev, id, datos));
+  };
+
+  const eliminarMovimientoFlujoCaja = (id) => {
+    setFlujoCaja((prev) => eliminarDeLista(prev, id));
   };
 
   const crearCotizacion = (datos) => {
@@ -290,6 +375,11 @@ export function CoreProvider({ children }) {
       vendedores,
       veterinarias,
       afiliados,
+      proveedores,
+      compras,
+      cuentasPorPagar,
+      cuentasPorCobrar,
+      flujoCaja,
 
       cotizaciones,
       pedidos,
@@ -323,6 +413,26 @@ export function CoreProvider({ children }) {
       crearAfiliado,
       actualizarAfiliado,
       eliminarAfiliado,
+
+      crearProveedor,
+      actualizarProveedor,
+      eliminarProveedor,
+
+      crearCompra,
+      actualizarCompra,
+      eliminarCompra,
+
+      crearCuentaPorPagar,
+      actualizarCuentaPorPagar,
+      eliminarCuentaPorPagar,
+
+      crearCuentaPorCobrar,
+      actualizarCuentaPorCobrar,
+      eliminarCuentaPorCobrar,
+
+      crearMovimientoFlujoCaja,
+      actualizarMovimientoFlujoCaja,
+      eliminarMovimientoFlujoCaja,
 
       crearCotizacion,
       actualizarCotizacion,
@@ -363,6 +473,11 @@ export function CoreProvider({ children }) {
       vendedores,
       veterinarias,
       afiliados,
+      proveedores,
+      compras,
+      cuentasPorPagar,
+      cuentasPorCobrar,
+      flujoCaja,
       cotizaciones,
       pedidos,
       ordenesTrabajo,

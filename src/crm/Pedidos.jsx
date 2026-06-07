@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
+const UNIDADES_NEGOCIO = [
+  'ELANPET',
+  'ELANKAV VISUAL',
+  'ELANKAV CENTER',
+  'ELANKAV SOLAR',
+  'ELAN AI',
+];
+
 const fechaActual = () => new Date().toISOString().slice(0, 10);
 
 const formInicial = () => ({
@@ -14,6 +22,7 @@ const formInicial = () => ({
   cliente: '',
   telefono: '',
   producto: '',
+  unidadNegocio: 'ELANKAV VISUAL',
   cantidad: '',
   total: '',
   anticipo: '',
@@ -109,6 +118,7 @@ export default function Pedidos() {
           cliente: empresaNombre,
           telefono,
           producto: cotizacionSeleccionada.descripcion || cotizacionSeleccionada.categoria || '',
+          unidadNegocio: cotizacionSeleccionada.unidadNegocio || 'ELANKAV VISUAL',
           total: String(cotizacionSeleccionada.total || ''),
           observaciones:
             prev.observaciones ||
@@ -159,6 +169,7 @@ export default function Pedidos() {
       cliente: form.cliente.trim(),
       telefono: form.telefono.trim(),
       producto: form.producto.trim(),
+      unidadNegocio: form.unidadNegocio,
       cantidad: Number(form.cantidad) || 0,
       total: Number(form.total) || 0,
       anticipo: Number(form.anticipo) || 0,
@@ -205,6 +216,7 @@ export default function Pedidos() {
         '',
       telefono: item.telefono || '',
       producto: item.producto || cotizacion?.descripcion || '',
+      unidadNegocio: item.unidadNegocio || cotizacion?.unidadNegocio || 'ELANKAV VISUAL',
       cantidad: String(item.cantidad || ''),
       total: String(item.total || ''),
       anticipo: String(item.anticipo || ''),
@@ -324,6 +336,18 @@ export default function Pedidos() {
             />
           </label>
 
+
+          <label>
+            Unidad de negocio
+            <select name="unidadNegocio" value={form.unidadNegocio} onChange={cambiar}>
+              {UNIDADES_NEGOCIO.map((unidad) => (
+                <option key={unidad} value={unidad}>
+                  {unidad}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label>
             Teléfono / WhatsApp
             <input
@@ -381,9 +405,8 @@ export default function Pedidos() {
             Estado
             <select name="estado" value={form.estado} onChange={cambiar}>
               <option>Pendiente</option>
-              <option>Confirmado</option>
-              <option>En producción</option>
-              <option>Listo</option>
+              <option>Aprobado</option>
+              <option>Producción</option>
               <option>Entregado</option>
               <option>Cancelado</option>
             </select>
@@ -432,6 +455,7 @@ export default function Pedidos() {
               <th>Cotización</th>
               <th>Empresa / Contacto</th>
               <th>Producto</th>
+              <th>Unidad</th>
               <th>Total</th>
               <th>Anticipo</th>
               <th>Saldo</th>
@@ -443,7 +467,7 @@ export default function Pedidos() {
           <tbody>
             {pedidos.length === 0 ? (
               <tr>
-                <td colSpan="9">No hay pedidos registrados.</td>
+                <td colSpan="10">No hay pedidos registrados.</td>
               </tr>
             ) : (
               pedidos.map((item) => {
@@ -469,6 +493,8 @@ export default function Pedidos() {
                       <br />
                       <small>Cantidad: {item.cantidad}</small>
                     </td>
+
+                    <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
 
                     <td>C$ {Number(item.total || 0).toFixed(2)}</td>
                     <td>C$ {Number(item.anticipo || 0).toFixed(2)}</td>

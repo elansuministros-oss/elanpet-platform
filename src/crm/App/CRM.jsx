@@ -5,6 +5,10 @@ import Empresas from '../Empresas';
 import Contactos from '../Contactos';
 import Clientes from '../Clientes';
 import Proveedores from '../Proveedores';
+import Compras from '../Compras';
+import CuentasPorPagar from '../CuentasPorPagar';
+import CuentasPorCobrar from '../CuentasPorCobrar';
+import FlujoCaja from '../FlujoCaja';
 import SeguimientoCRM from '../SeguimientoCRM';
 import Vendedores from '../Vendedores';
 import VeterinariasCRM from '../VeterinariasCRM';
@@ -40,6 +44,7 @@ export default function CRM() {
           { id: 'contactos', label: 'Contactos', icono: '👤', componente: <Contactos /> },
           { id: 'clientes', label: 'Clientes', icono: '🤝', componente: <Clientes /> },
           { id: 'proveedores', label: 'Proveedores', icono: '🚚', componente: <Proveedores /> },
+          { id: 'compras', label: 'Compras', icono: '🧾', componente: <Compras /> },
           { id: 'seguimiento', label: 'Seguimiento', icono: '📌', componente: <SeguimientoCRM /> },
         ],
       },
@@ -64,6 +69,9 @@ export default function CRM() {
         grupo: 'Finanzas',
         items: [
           { id: 'cobros', label: 'Cobros', icono: '💰', componente: <Cobros /> },
+          { id: 'cuentas-cobrar', label: 'Cuentas por Cobrar', icono: '📈', componente: <CuentasPorCobrar /> },
+          { id: 'cuentas-pagar', label: 'Cuentas por Pagar', icono: '📉', componente: <CuentasPorPagar /> },
+          { id: 'flujo-caja', label: 'Flujo de Caja', icono: '🏦', componente: <FlujoCaja /> },
           { id: 'comisiones', label: 'Comisiones', icono: '💵', componente: <Comisiones /> },
           { id: 'reportes', label: 'Reportes', icono: '📈', componente: <ReportesCRM /> },
         ],

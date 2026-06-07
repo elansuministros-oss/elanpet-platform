@@ -106,37 +106,31 @@ export const categoriasHome = [
     nombre: 'Casas',
     categoria: 'Casas para perros',
     imagen: '/categorias/casas.png',
-    icono: '🏠',
   },
   {
     nombre: 'Comederos',
     categoria: 'Comederos',
     imagen: '/categorias/comederos.png',
-    icono: '🍽️',
   },
   {
     nombre: 'Camas',
     categoria: 'Camas',
     imagen: '/categorias/camas.png',
-    icono: '🛏️',
   },
   {
     nombre: 'Escaleras',
     categoria: 'Escaleras',
     imagen: '/categorias/escaleras.png',
-    icono: '🪜',
   },
   {
     nombre: 'Organizadores',
     categoria: 'Organizadores',
     imagen: '/categorias/organizadores.png',
-    icono: '📦',
   },
   {
     nombre: 'Torres para gatos',
     categoria: 'Torres para gatos',
     imagen: '/categorias/torres-gatos.png',
-    icono: '🐱',
   },
 ];
 

@@ -1900,3 +1900,166 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* =========================================
+   ELANPET CATALOGO LIGHTBOX V11
+   Ampliación de imágenes PC + móvil
+========================================= */
+.product-image-button {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+  overflow: hidden;
+}
+
+.product-image-button:hover {
+  transform: none;
+  filter: none;
+}
+
+.product-image-button .product-image {
+  transition: transform 0.24s ease, filter 0.24s ease;
+}
+
+.product-image-button:hover .product-image {
+  transform: scale(1.035);
+  filter: brightness(0.96);
+}
+
+.product-zoom-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(6, 43, 85, 0.84);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(6, 43, 85, 0.24);
+  backdrop-filter: blur(8px);
+}
+
+body.lightbox-open {
+  overflow: hidden;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(6, 15, 28, 0.82);
+  backdrop-filter: blur(8px);
+  cursor: zoom-out;
+}
+
+.image-lightbox-close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 100000;
+  width: 50px;
+  height: 50px;
+  min-height: 50px;
+  padding: 0;
+  border-radius: 999px;
+  background: #ffffff !important;
+  color: var(--azul-oscuro) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+.image-lightbox-content {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 70px);
+  display: grid;
+  gap: 12px;
+  cursor: default;
+}
+
+.image-lightbox-content img {
+  width: 100%;
+  max-height: calc(100vh - 145px);
+  object-fit: contain;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+}
+
+.image-lightbox-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--azul-oscuro);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
+}
+
+.image-lightbox-caption b {
+  font-size: 18px;
+}
+
+.image-lightbox-caption span {
+  color: var(--teal);
+  font-weight: 900;
+}
+
+.empty-catalog {
+  margin-top: 18px;
+}
+
+@media (max-width: 700px) {
+  .product-zoom-badge {
+    right: 9px;
+    bottom: 9px;
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
+  .image-lightbox {
+    padding: 14px;
+  }
+
+  .image-lightbox-close {
+    top: 12px;
+    right: 12px;
+    width: 46px;
+    height: 46px;
+    min-height: 46px;
+  }
+
+  .image-lightbox-content {
+    max-height: calc(100vh - 42px);
+  }
+
+  .image-lightbox-content img {
+    max-height: calc(100vh - 135px);
+    border-radius: 18px;
+  }
+
+  .image-lightbox-caption {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+  }
+
+  .image-lightbox-caption b {
+    font-size: 15px;
+  }
+}

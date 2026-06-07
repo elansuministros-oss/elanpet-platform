@@ -140,10 +140,7 @@ export default function Home({ setPage }) {
         </div>
 
         <div className="elanpet-launch-media">
-          <img
-            src={heroImagen}
-            alt={heroBanner.titulo || 'ELANPET productos para perros y gatos'}
-          />
+          <img src={heroImagen} alt={heroBanner.titulo || 'ELANPET productos para perros y gatos'} />
         </div>
       </section>
 
@@ -163,19 +160,8 @@ export default function Home({ setPage }) {
               onClick={() => setPage('catalogo')}
             >
               {cat.imagen ? (
-                <img
-                  src={cat.imagen}
-                  alt={cat.nombre}
-                  className="elanpet-category-image"
-                  onError={(event) => {
-                    event.currentTarget.style.display = 'none';
-                    const fallback = event.currentTarget.nextElementSibling;
-                    if (fallback) fallback.style.display = 'block';
-                  }}
-                />
+                <img src={cat.imagen} alt={cat.nombre} className="elanpet-category-image" />
               ) : null}
-
-              <span style={{ display: cat.imagen ? 'none' : 'block' }}>{cat.icono}</span>
 
               <b>{cat.nombre}</b>
               <i>

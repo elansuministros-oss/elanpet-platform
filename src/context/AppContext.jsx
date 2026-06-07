@@ -946,28 +946,51 @@ export function AppProvider({ children }) {
   };
 
   const crearBanner = (banner) =>
-    setBanners((prev) => [
-      {
+    setBanners((prev) => {
+      const nuevoBanner = {
         ...banner,
         id: `banner-${Date.now()}`,
         activo: banner.activo ?? true,
         createdAt: Date.now(),
         actualizadoEn: Date.now(),
-      },
-      ...prev,
-    ]);
+      };
+
+      if (nuevoBanner.activo && nuevoBanner.ubicacion === 'hero-principal') {
+        return [
+          nuevoBanner,
+          ...prev.map((b) =>
+            b.ubicacion === 'hero-principal'
+              ? { ...b, activo: false }
+              : b
+          ),
+        ];
+      }
+
+      return [nuevoBanner, ...prev];
+    });
 
   const actualizarBanner = (banner) =>
     setBanners((prev) =>
-      prev.map((b) =>
-        b.id === banner.id
-          ? {
-              ...b,
-              ...banner,
-              actualizadoEn: Date.now(),
-            }
-          : b
-      )
+      prev.map((b) => {
+        if (
+          banner.activo &&
+          banner.ubicacion === 'hero-principal' &&
+          b.ubicacion === 'hero-principal' &&
+          b.id !== banner.id
+        ) {
+          return { ...b, activo: false };
+        }
+
+        if (b.id === banner.id) {
+          return {
+            ...b,
+            ...banner,
+            actualizadoEn: Date.now(),
+          };
+        }
+
+        return b;
+      })
     );
   const eliminarBanner = (id) => setBanners((prev) => prev.filter((b) => b.id !== id));
 

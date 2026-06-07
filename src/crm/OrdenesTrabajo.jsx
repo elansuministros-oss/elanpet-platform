@@ -9,7 +9,43 @@ const UNIDADES_NEGOCIO = [
   'ELAN AI',
 ];
 
+const MONEDAS = ['C$', 'USD'];
+
 const fechaActual = () => new Date().toISOString().slice(0, 10);
+
+const numero = (valor) => Number(valor || 0);
+
+const dinero = (valor, moneda = 'C$') => {
+  const currency = moneda === 'USD' ? 'USD' : 'NIO';
+
+  return new Intl.NumberFormat('es-NI', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(numero(valor));
+};
+
+const porcentaje = (valor) => `${numero(valor).toFixed(2)}%`;
+
+const calcularCostos = (datos = {}) => {
+  const venta = numero(datos.total || datos.valorVenta || datos.precioVenta);
+  const materiales = numero(datos.costoMateriales);
+  const manoObra = numero(datos.costoManoObra);
+  const transporte = numero(datos.costoTransporte);
+  const instalacion = numero(datos.costoInstalacion);
+  const otros = numero(datos.otrosCostos);
+
+  const costoTotal = materiales + manoObra + transporte + instalacion + otros;
+  const utilidad = venta - costoTotal;
+  const margen = venta > 0 ? (utilidad / venta) * 100 : 0;
+
+  return {
+    venta,
+    costoTotal,
+    utilidad,
+    margen,
+  };
+};
 
 const formInicial = () => ({
   codigo: '',
@@ -27,6 +63,7 @@ const formInicial = () => ({
   unidadNegocio: 'ELANKAV VISUAL',
   cantidad: '',
   total: '',
+  moneda: 'C$',
   responsable: '',
   area: 'Producción',
   prioridad: 'Media',
@@ -36,6 +73,11 @@ const formInicial = () => ({
   descripcion: '',
   materiales: '',
   medidas: '',
+  costoMateriales: '',
+  costoManoObra: '',
+  costoTransporte: '',
+  costoInstalacion: '',
+  otrosCostos: '',
   observaciones: '',
 });
 
@@ -50,6 +92,7 @@ export default function OrdenesTrabajo() {
 
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(formInicial());
+  const [busqueda, setBusqueda] = useState('');
 
   const pedidosDisponibles = useMemo(() => {
     return pedidos.filter((pedido) => {
@@ -58,13 +101,48 @@ export default function OrdenesTrabajo() {
     });
   }, [pedidos]);
 
-  const obtenerEmpresaNombre = (pedido) => {
-    return pedido.empresaNombre || pedido.cliente || pedido.empresa || '';
-  };
+  const resumen = useMemo(() => {
+    return ordenesTrabajo.reduce(
+      (acc, item) => {
+        const calculo = calcularCostos(item);
+        acc.venta += calculo.venta;
+        acc.costo += calculo.costoTotal;
+        acc.utilidad += calculo.utilidad;
 
-  const obtenerContactoNombre = (pedido) => {
-    return pedido.contactoNombre || pedido.contacto || '';
-  };
+        if (['Pendiente', 'En proceso', 'Producción'].includes(item.estado)) {
+          acc.activas += 1;
+        }
+
+        if (item.estado === 'Terminada') {
+          acc.terminadas += 1;
+        }
+
+        return acc;
+      },
+      { venta: 0, costo: 0, utilidad: 0, activas: 0, terminadas: 0 }
+    );
+  }, [ordenesTrabajo]);
+
+  const ordenesFiltradas = useMemo(() => {
+    const texto = busqueda.toLowerCase().trim();
+
+    if (!texto) return ordenesTrabajo;
+
+    return ordenesTrabajo.filter((item) => {
+      return [
+        item.codigo,
+        item.cliente,
+        item.empresaNombre,
+        item.producto,
+        item.unidadNegocio,
+        item.estado,
+        item.responsable,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(texto);
+    });
+  }, [ordenesTrabajo, busqueda]);
 
   const cambiar = (e) => {
     const { name, value } = e.target;
@@ -87,15 +165,9 @@ export default function OrdenesTrabajo() {
             cliente: '',
             telefono: '',
             producto: '',
-            cantidad: '',
             total: '',
-            descripcion: '',
-            observaciones: prev.observaciones,
           };
         }
-
-        const empresaNombre = obtenerEmpresaNombre(pedidoSeleccionado);
-        const contactoNombre = obtenerContactoNombre(pedidoSeleccionado);
 
         return {
           ...prev,
@@ -104,20 +176,24 @@ export default function OrdenesTrabajo() {
           cotizacionId: pedidoSeleccionado.cotizacionId || '',
           cotizacionCodigo: pedidoSeleccionado.cotizacionCodigo || '',
           empresaId: pedidoSeleccionado.empresaId || '',
-          empresaNombre,
-          contactoId: pedidoSeleccionado.contactoId || '',
-          contactoNombre,
-          cliente: empresaNombre,
-          telefono: pedidoSeleccionado.telefono || '',
-          producto: pedidoSeleccionado.producto || '',
-          unidadNegocio: pedidoSeleccionado.unidadNegocio || 'ELANKAV VISUAL',
-          cantidad: String(pedidoSeleccionado.cantidad || ''),
-          total: String(pedidoSeleccionado.total || ''),
-          descripcion: pedidoSeleccionado.producto || '',
-          observaciones:
-            prev.observaciones ||
-            pedidoSeleccionado.observaciones ||
+          empresaNombre:
+            pedidoSeleccionado.empresaNombre ||
+            pedidoSeleccionado.cliente ||
+            pedidoSeleccionado.empresa ||
             '',
+          contactoId: pedidoSeleccionado.contactoId || '',
+          contactoNombre: pedidoSeleccionado.contactoNombre || pedidoSeleccionado.contacto || '',
+          cliente:
+            pedidoSeleccionado.cliente ||
+            pedidoSeleccionado.empresaNombre ||
+            pedidoSeleccionado.empresa ||
+            '',
+          telefono: pedidoSeleccionado.telefono || pedidoSeleccionado.whatsapp || '',
+          producto: pedidoSeleccionado.producto || pedidoSeleccionado.descripcion || '',
+          unidadNegocio: pedidoSeleccionado.unidadNegocio || prev.unidadNegocio,
+          cantidad: pedidoSeleccionado.cantidad || prev.cantidad,
+          total: pedidoSeleccionado.total || pedidoSeleccionado.monto || prev.total,
+          moneda: pedidoSeleccionado.moneda || prev.moneda,
         };
       }
 
@@ -133,52 +209,31 @@ export default function OrdenesTrabajo() {
   const guardar = (e) => {
     e.preventDefault();
 
-    if (!form.pedidoId && !form.cliente.trim()) {
-      alert('Debés seleccionar un pedido o indicar el cliente.');
-      return;
-    }
+    if (!form.producto.trim() && !form.descripcion.trim()) return;
 
-    if (!form.producto.trim() && !form.descripcion.trim()) {
-      alert('Debés indicar el producto, trabajo o descripción.');
-      return;
-    }
-
-    const pedidoSeleccionado = pedidos.find((pedido) => pedido.id === form.pedidoId);
+    const calculo = calcularCostos(form);
 
     const datos = {
+      ...form,
+      id: editandoId || form.id,
       codigo: form.codigo.trim() || `OT-${Date.now()}`,
-      pedidoId: form.pedidoId,
-      pedidoCodigo: form.pedidoCodigo || pedidoSeleccionado?.codigo || '',
-      cotizacionId: form.cotizacionId || pedidoSeleccionado?.cotizacionId || '',
-      cotizacionCodigo:
-        form.cotizacionCodigo || pedidoSeleccionado?.cotizacionCodigo || '',
-      empresaId: form.empresaId || pedidoSeleccionado?.empresaId || '',
-      empresaNombre:
-        form.empresaNombre ||
-        (pedidoSeleccionado ? obtenerEmpresaNombre(pedidoSeleccionado) : ''),
-      contactoId: form.contactoId || pedidoSeleccionado?.contactoId || '',
-      contactoNombre:
-        form.contactoNombre ||
-        (pedidoSeleccionado ? obtenerContactoNombre(pedidoSeleccionado) : ''),
-      cliente:
-        form.cliente.trim() ||
-        form.empresaNombre ||
-        (pedidoSeleccionado ? obtenerEmpresaNombre(pedidoSeleccionado) : ''),
-      telefono: form.telefono.trim(),
+      cliente: form.cliente.trim(),
       producto: form.producto.trim(),
-      unidadNegocio: form.unidadNegocio,
-      cantidad: Number(form.cantidad) || 0,
-      total: Number(form.total) || 0,
-      responsable: form.responsable.trim(),
-      area: form.area,
-      prioridad: form.prioridad,
-      estado: form.estado,
-      fechaInicio: form.fechaInicio,
-      fechaEntrega: form.fechaEntrega,
       descripcion: form.descripcion.trim(),
+      responsable: form.responsable.trim(),
       materiales: form.materiales.trim(),
       medidas: form.medidas.trim(),
       observaciones: form.observaciones.trim(),
+      cantidad: numero(form.cantidad),
+      total: numero(form.total),
+      costoMateriales: numero(form.costoMateriales),
+      costoManoObra: numero(form.costoManoObra),
+      costoTransporte: numero(form.costoTransporte),
+      costoInstalacion: numero(form.costoInstalacion),
+      otrosCostos: numero(form.otrosCostos),
+      costoTotal: calculo.costoTotal,
+      utilidadEstimada: calculo.utilidad,
+      margenEstimado: calculo.margen,
       actualizado: new Date().toISOString(),
     };
 
@@ -193,110 +248,73 @@ export default function OrdenesTrabajo() {
 
   const editar = (item) => {
     setEditandoId(item.id);
-
-    const pedido = pedidos.find((pedidoItem) => pedidoItem.id === item.pedidoId);
-
     setForm({
-      codigo: item.codigo || '',
-      pedidoId: item.pedidoId || '',
-      pedidoCodigo: item.pedidoCodigo || pedido?.codigo || '',
-      cotizacionId: item.cotizacionId || pedido?.cotizacionId || '',
-      cotizacionCodigo: item.cotizacionCodigo || pedido?.cotizacionCodigo || '',
-      empresaId: item.empresaId || pedido?.empresaId || '',
-      empresaNombre:
-        item.empresaNombre ||
-        (pedido ? obtenerEmpresaNombre(pedido) : '') ||
-        item.empresa ||
-        item.cliente ||
-        '',
-      contactoId: item.contactoId || pedido?.contactoId || '',
-      contactoNombre:
-        item.contactoNombre ||
-        (pedido ? obtenerContactoNombre(pedido) : '') ||
-        item.contacto ||
-        '',
-      cliente:
-        item.cliente ||
-        item.empresaNombre ||
-        (pedido ? obtenerEmpresaNombre(pedido) : '') ||
-        '',
-      telefono: item.telefono || pedido?.telefono || '',
-      producto: item.producto || pedido?.producto || '',
-      unidadNegocio: item.unidadNegocio || pedido?.unidadNegocio || 'ELANKAV VISUAL',
-      cantidad: String(item.cantidad || pedido?.cantidad || ''),
-      total: String(item.total || pedido?.total || ''),
-      responsable: item.responsable || '',
-      area: item.area || 'Producción',
-      prioridad: item.prioridad || 'Media',
-      estado: item.estado || 'Pendiente',
-      fechaInicio: item.fechaInicio || fechaActual(),
-      fechaEntrega: item.fechaEntrega || '',
-      descripcion: item.descripcion || item.producto || pedido?.producto || '',
-      materiales: item.materiales || '',
-      medidas: item.medidas || '',
-      observaciones: item.observaciones || '',
+      ...formInicial(),
+      ...item,
+      total: item.total ?? '',
+      cantidad: item.cantidad ?? '',
+      costoMateriales: item.costoMateriales ?? '',
+      costoManoObra: item.costoManoObra ?? '',
+      costoTransporte: item.costoTransporte ?? '',
+      costoInstalacion: item.costoInstalacion ?? '',
+      otrosCostos: item.otrosCostos ?? '',
     });
   };
 
   const eliminar = (id) => {
-    const confirmar = window.confirm('¿Seguro que querés eliminar esta orden de trabajo?');
-    if (!confirmar) return;
-
     eliminarOrdenTrabajo(id);
     if (editandoId === id) limpiar();
   };
 
-  const resumen = useMemo(() => {
-    return {
-      total: ordenesTrabajo.length,
-      pendientes: ordenesTrabajo.filter((item) => item.estado === 'Pendiente').length,
-      proceso: ordenesTrabajo.filter((item) => item.estado === 'En Proceso').length,
-      terminadas: ordenesTrabajo.filter((item) => item.estado === 'Finalizada').length,
-    };
-  }, [ordenesTrabajo]);
+  const margenGeneral = resumen.venta > 0 ? (resumen.utilidad / resumen.venta) * 100 : 0;
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="crm-page">
+      <div className="crm-page-header">
         <div>
           <h2>Órdenes de Trabajo</h2>
-          <p>Control operativo conectado a pedidos, cotizaciones, empresas y contactos.</p>
+          <p>Control operativo con costos estimados, utilidad y margen por proyecto.</p>
         </div>
       </div>
 
-      <div className="crm-resumen">
-        <div className="crm-card">
-          <span>Total órdenes</span>
-          <strong>{resumen.total}</strong>
+      <div className="crm-stats">
+        <div className="crm-stat-card">
+          <span>Venta estimada</span>
+          <strong>{dinero(resumen.venta)}</strong>
         </div>
-
-        <div className="crm-card">
-          <span>Pendientes</span>
-          <strong>{resumen.pendientes}</strong>
+        <div className="crm-stat-card">
+          <span>Costo estimado</span>
+          <strong>{dinero(resumen.costo)}</strong>
         </div>
-
-        <div className="crm-card">
-          <span>En proceso</span>
-          <strong>{resumen.proceso}</strong>
+        <div className="crm-stat-card">
+          <span>Utilidad estimada</span>
+          <strong>{dinero(resumen.utilidad)}</strong>
         </div>
-
-        <div className="crm-card">
+        <div className="crm-stat-card">
+          <span>Margen general</span>
+          <strong>{porcentaje(margenGeneral)}</strong>
+        </div>
+        <div className="crm-stat-card">
+          <span>Activas</span>
+          <strong>{resumen.activas}</strong>
+        </div>
+        <div className="crm-stat-card">
           <span>Terminadas</span>
           <strong>{resumen.terminadas}</strong>
         </div>
       </div>
 
-      <form className="crm-form" onSubmit={guardar}>
+      <div className="crm-card">
         <h3>{editandoId ? 'Editar orden de trabajo' : 'Nueva orden de trabajo'}</h3>
 
-        <div className="form-grid">
+        <form onSubmit={guardar} className="crm-form-grid">
           <label>
-            Pedido
+            Pedido relacionado
             <select name="pedidoId" value={form.pedidoId} onChange={cambiar}>
-              <option value="">Seleccionar pedido</option>
+              <option value="">Sin pedido relacionado</option>
               {pedidosDisponibles.map((pedido) => (
                 <option key={pedido.id} value={pedido.id}>
-                  {pedido.codigo || 'Sin código'} - {obtenerEmpresaNombre(pedido) || 'Sin cliente'} - {pedido.producto || 'Sin producto'}
+                  {pedido.codigo || pedido.id} · {pedido.cliente || pedido.empresaNombre || 'Sin cliente'}
                 </option>
               ))}
             </select>
@@ -304,112 +322,82 @@ export default function OrdenesTrabajo() {
 
           <label>
             Código OT
-            <input
-              name="codigo"
-              value={form.codigo}
-              onChange={cambiar}
-              placeholder="OT-0001"
-            />
+            <input name="codigo" value={form.codigo} onChange={cambiar} placeholder="Automático" />
           </label>
-
-          <label>
-            Empresa / Cliente
-            <input
-              name="cliente"
-              value={form.cliente}
-              onChange={cambiar}
-              placeholder="Se completa desde el pedido"
-              readOnly={Boolean(form.pedidoId)}
-            />
-          </label>
-
-          <label>
-            Contacto
-            <input
-              name="contactoNombre"
-              value={form.contactoNombre}
-              onChange={cambiar}
-              placeholder="Contacto relacionado"
-              readOnly={Boolean(form.pedidoId)}
-            />
-          </label>
-
 
           <label>
             Unidad de negocio
             <select name="unidadNegocio" value={form.unidadNegocio} onChange={cambiar}>
               {UNIDADES_NEGOCIO.map((unidad) => (
-                <option key={unidad} value={unidad}>
-                  {unidad}
-                </option>
+                <option key={unidad} value={unidad}>{unidad}</option>
               ))}
             </select>
           </label>
 
           <label>
-            Teléfono / WhatsApp
-            <input
-              name="telefono"
-              value={form.telefono}
-              onChange={cambiar}
-              placeholder="Número de contacto"
-            />
+            Cliente
+            <input name="cliente" value={form.cliente} onChange={cambiar} />
           </label>
 
           <label>
-            Producto / Trabajo
-            <input
-              name="producto"
-              value={form.producto}
-              onChange={cambiar}
-              placeholder="Trabajo a producir"
-              readOnly={Boolean(form.pedidoId)}
-            />
+            Producto / trabajo
+            <input name="producto" value={form.producto} onChange={cambiar} />
           </label>
 
           <label>
             Cantidad
-            <input
-              name="cantidad"
-              type="number"
-              min="0"
-              value={form.cantidad}
-              onChange={cambiar}
-              placeholder="0"
-            />
+            <input name="cantidad" type="number" step="0.01" value={form.cantidad} onChange={cambiar} />
           </label>
 
           <label>
-            Total pedido
-            <input
-              name="total"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.total}
-              onChange={cambiar}
-              placeholder="0.00"
-              readOnly={Boolean(form.pedidoId)}
-            />
+            Moneda
+            <select name="moneda" value={form.moneda} onChange={cambiar}>
+              {MONEDAS.map((moneda) => (
+                <option key={moneda} value={moneda}>{moneda}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Venta total
+            <input name="total" type="number" step="0.01" value={form.total} onChange={cambiar} />
+          </label>
+
+          <label>
+            Materiales
+            <input name="costoMateriales" type="number" step="0.01" value={form.costoMateriales} onChange={cambiar} />
+          </label>
+
+          <label>
+            Mano de obra
+            <input name="costoManoObra" type="number" step="0.01" value={form.costoManoObra} onChange={cambiar} />
+          </label>
+
+          <label>
+            Transporte
+            <input name="costoTransporte" type="number" step="0.01" value={form.costoTransporte} onChange={cambiar} />
+          </label>
+
+          <label>
+            Instalación
+            <input name="costoInstalacion" type="number" step="0.01" value={form.costoInstalacion} onChange={cambiar} />
+          </label>
+
+          <label>
+            Otros costos
+            <input name="otrosCostos" type="number" step="0.01" value={form.otrosCostos} onChange={cambiar} />
           </label>
 
           <label>
             Responsable
-            <input
-              name="responsable"
-              value={form.responsable}
-              onChange={cambiar}
-              placeholder="Responsable interno"
-            />
+            <input name="responsable" value={form.responsable} onChange={cambiar} />
           </label>
 
           <label>
             Área
             <select name="area" value={form.area} onChange={cambiar}>
-              <option value="Producción">Producción</option>
               <option value="Diseño">Diseño</option>
-              <option value="Impresión">Impresión</option>
-              <option value="Corte">Corte</option>
+              <option value="Producción">Producción</option>
               <option value="Instalación">Instalación</option>
               <option value="Administración">Administración</option>
             </select>
@@ -429,144 +417,140 @@ export default function OrdenesTrabajo() {
             Estado
             <select name="estado" value={form.estado} onChange={cambiar}>
               <option value="Pendiente">Pendiente</option>
-              <option value="En Proceso">En Proceso</option>
-              <option value="Finalizada">Finalizada</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Producción">Producción</option>
+              <option value="Terminada">Terminada</option>
+              <option value="Entregada">Entregada</option>
               <option value="Cancelada">Cancelada</option>
             </select>
           </label>
 
           <label>
             Fecha inicio
-            <input
-              name="fechaInicio"
-              type="date"
-              value={form.fechaInicio}
-              onChange={cambiar}
-            />
+            <input name="fechaInicio" type="date" value={form.fechaInicio} onChange={cambiar} />
           </label>
 
           <label>
             Fecha entrega
-            <input
-              name="fechaEntrega"
-              type="date"
-              value={form.fechaEntrega}
-              onChange={cambiar}
-            />
+            <input name="fechaEntrega" type="date" value={form.fechaEntrega} onChange={cambiar} />
           </label>
-        </div>
 
-        <label>
-          Descripción del trabajo
-          <textarea
-            name="descripcion"
-            value={form.descripcion}
-            onChange={cambiar}
-            placeholder="Detalle técnico del trabajo a producir"
-            rows="3"
-          />
-        </label>
+          <label className="crm-field-full">
+            Descripción
+            <textarea name="descripcion" value={form.descripcion} onChange={cambiar} />
+          </label>
 
-        <label>
-          Materiales
-          <textarea
-            name="materiales"
-            value={form.materiales}
-            onChange={cambiar}
-            placeholder="Materiales requeridos"
-            rows="3"
-          />
-        </label>
+          <label className="crm-field-full">
+            Materiales previstos
+            <textarea name="materiales" value={form.materiales} onChange={cambiar} />
+          </label>
 
-        <label>
-          Medidas
-          <textarea
-            name="medidas"
-            value={form.medidas}
-            onChange={cambiar}
-            placeholder="Medidas, cantidades, acabados o detalles físicos"
-            rows="3"
-          />
-        </label>
+          <label className="crm-field-full">
+            Medidas
+            <textarea name="medidas" value={form.medidas} onChange={cambiar} />
+          </label>
 
-        <label>
-          Observaciones
-          <textarea
-            name="observaciones"
-            value={form.observaciones}
-            onChange={cambiar}
-            placeholder="Notas internas"
-            rows="3"
-          />
-        </label>
+          <label className="crm-field-full">
+            Observaciones
+            <textarea name="observaciones" value={form.observaciones} onChange={cambiar} />
+          </label>
 
-        <div className="form-actions">
-          <button type="submit">
-            {editandoId ? 'Actualizar orden' : 'Guardar orden'}
-          </button>
+          <div className="crm-field-full crm-cost-box">
+            <strong>Resumen de costos</strong>
+            <span>Venta: {dinero(calcularCostos(form).venta, form.moneda)}</span>
+            <span>Costo: {dinero(calcularCostos(form).costoTotal, form.moneda)}</span>
+            <span>Utilidad: {dinero(calcularCostos(form).utilidad, form.moneda)}</span>
+            <span>Margen: {porcentaje(calcularCostos(form).margen)}</span>
+          </div>
 
-          {editandoId && (
-            <button type="button" className="btn-secundario" onClick={limpiar}>
-              Cancelar edición
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div className="crm-table-wrap">
-        <table className="crm-table">
-          <thead>
-            <tr>
-              <th>Código OT</th>
-              <th>Pedido</th>
-              <th>Empresa</th>
-              <th>Contacto</th>
-              <th>Trabajo</th>
-              <th>Responsable</th>
-              <th>Prioridad</th>
-              <th>Unidad</th>
-              <th>Estado</th>
-              <th>Entrega</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {ordenesTrabajo.map((item) => (
-              <tr key={item.id}>
-                <td>{item.codigo || 'Sin código'}</td>
-                <td>{item.pedidoCodigo || item.pedido || 'Sin pedido'}</td>
-                <td>{item.empresaNombre || item.empresa || item.cliente || 'Sin empresa'}</td>
-                <td>{item.contactoNombre || item.contacto || 'Sin contacto'}</td>
-                <td>{item.producto || item.descripcion || 'Sin descripción'}</td>
-                <td>{item.responsable || 'Sin responsable'}</td>
-                <td>{item.prioridad || 'Media'}</td>
-                <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
-                <td>{item.estado || 'Pendiente'}</td>
-                <td>{item.fechaEntrega || 'Sin fecha'}</td>
-                <td>
-                  <button type="button" onClick={() => editar(item)}>
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={() => eliminar(item.id)}
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {ordenesTrabajo.length === 0 && (
-              <tr>
-                <td colSpan="11">No hay órdenes de trabajo registradas.</td>
-              </tr>
+          <div className="crm-actions crm-field-full">
+            <button type="submit">{editandoId ? 'Actualizar orden' : 'Crear orden'}</button>
+            {editandoId && (
+              <button type="button" onClick={limpiar} className="btn-secondary">
+                Cancelar edición
+              </button>
             )}
-          </tbody>
-        </table>
+          </div>
+        </form>
       </div>
+
+      <div className="crm-card">
+        <div className="crm-page-header">
+          <div>
+            <h3>Listado de órdenes</h3>
+            <p>Seguimiento de venta, costo, utilidad y margen.</p>
+          </div>
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar orden..."
+          />
+        </div>
+
+        <div className="crm-table-wrap">
+          <table className="crm-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Trabajo</th>
+                <th>Unidad</th>
+                <th>Venta</th>
+                <th>Costo</th>
+                <th>Utilidad</th>
+                <th>Margen</th>
+                <th>Estado</th>
+                <th>Entrega</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ordenesFiltradas.map((item) => {
+                const calculo = calcularCostos(item);
+
+                return (
+                  <tr key={item.id}>
+                    <td>{item.codigo}</td>
+                    <td>{item.cliente || item.empresaNombre || 'Sin cliente'}</td>
+                    <td>{item.producto || item.descripcion || 'Sin descripción'}</td>
+                    <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
+                    <td>{dinero(calculo.venta, item.moneda)}</td>
+                    <td>{dinero(calculo.costoTotal, item.moneda)}</td>
+                    <td>{dinero(calculo.utilidad, item.moneda)}</td>
+                    <td>{porcentaje(calculo.margen)}</td>
+                    <td>{item.estado || 'Pendiente'}</td>
+                    <td>{item.fechaEntrega || 'Sin fecha'}</td>
+                    <td>
+                      <button type="button" onClick={() => editar(item)}>Editar</button>
+                      <button type="button" className="btn-danger" onClick={() => eliminar(item.id)}>
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {ordenesFiltradas.length === 0 && (
+                <tr>
+                  <td colSpan="11">No hay órdenes registradas.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <style>{`
+        .crm-cost-box {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 8px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          padding: 14px;
+        }
+      `}</style>
     </div>
   );
 }

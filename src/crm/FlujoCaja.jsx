@@ -1,29 +1,79 @@
 import React, { useMemo, useState } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
-const UNIDADES_NEGOCIO = [
-  'ELANPET',
-  'ELANKAV VISUAL',
-  'ELANKAV CENTER',
-  'ELANKAV SOLAR',
-  'ELAN AI',
-];
 
-const TIPOS_MOVIMIENTO = ['Ingreso', 'Egreso'];
-const ESTADOS_MOVIMIENTO = ['Registrado', 'Pendiente', 'Anulado'];
+const UNIDADES_NEGOCIO = ['ELANPET', 'ELANKAV VISUAL', 'ELANKAV CENTER', 'ELANKAV SOLAR', 'ELAN AI'];
+const TIPOS_FISCALES = ['Con IVA', 'Sin factura', 'Exento'];
+const IVA = 0.15;
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
-
-const formatoCordobas = (valor) =>
-  new Intl.NumberFormat('es-NI', {
-    style: 'currency',
-    currency: 'NIO',
-    minimumFractionDigits: 2,
-  }).format(Number(valor) || 0);
-
 const numero = (valor) => Number(valor) || 0;
+const moneda = (valor) =>
+  new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO', minimumFractionDigits: 2 }).format(numero(valor));
 
-const normalizarEstado = (valor = '') => valor.toString().trim().toLowerCase();
+const fiscalVenta = (total, tipoFiscal, retencionPorcentaje = 0) => {
+  const monto = numero(total);
+  const retencion = monto * (numero(retencionPorcentaje) / 100);
+  if (tipoFiscal === 'Con IVA') {
+    const subtotal = monto / (1 + IVA);
+    const iva = monto - subtotal;
+    return { subtotal, iva, retencion, neto: monto - retencion };
+  }
+  return { subtotal: monto, iva: 0, retencion, neto: monto - retencion };
+};
+
+const fiscalCompra = (subtotal, tipoFiscal) => {
+  const base = numero(subtotal);
+  if (tipoFiscal === 'Con IVA') {
+    const iva = base * IVA;
+    return { subtotal: base, iva, total: base + iva };
+  }
+  return { subtotal: base, iva: 0, total: base };
+};
+
+const styles = {
+  page: { display: 'grid', gap: 18 },
+  header: { background: '#fff', borderRadius: 18, padding: 20, boxShadow: '0 8px 24px rgba(15,23,42,.08)' },
+  title: { margin: 0, color: '#111827' },
+  subtitle: { margin: '6px 0 0', color: '#6b7280' },
+  card: { background: '#fff', borderRadius: 18, padding: 18, boxShadow: '0 8px 24px rgba(15,23,42,.08)' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 },
+  label: { display: 'grid', gap: 6, fontWeight: 800, color: '#374151', fontSize: 13 },
+  input: { width: '100%', border: '1px solid #d1d5db', borderRadius: 12, padding: '10px 12px', fontSize: 14, boxSizing: 'border-box' },
+  select: { width: '100%', border: '1px solid #d1d5db', borderRadius: 12, padding: '10px 12px', fontSize: 14, background: '#fff', boxSizing: 'border-box' },
+  textarea: { width: '100%', minHeight: 76, border: '1px solid #d1d5db', borderRadius: 12, padding: '10px 12px', fontSize: 14, boxSizing: 'border-box' },
+  actions: { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 },
+  primary: { border: 0, borderRadius: 12, padding: '11px 15px', background: '#1f5fad', color: '#fff', fontWeight: 900, cursor: 'pointer' },
+  secondary: { border: '1px solid #d1d5db', borderRadius: 12, padding: '11px 15px', background: '#fff', color: '#374151', fontWeight: 900, cursor: 'pointer' },
+  edit: { border: 0, borderRadius: 10, padding: '8px 10px', background: '#2563eb', color: '#fff', fontWeight: 800, cursor: 'pointer' },
+  danger: { border: 0, borderRadius: 10, padding: '8px 10px', background: '#dc2626', color: '#fff', fontWeight: 800, cursor: 'pointer' },
+  stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 },
+  stat: { background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 16, padding: 14 },
+  statLabel: { color: '#6b7280', fontSize: 12, fontWeight: 800 },
+  statValue: { display: 'block', marginTop: 6, fontSize: 20, color: '#111827', fontWeight: 950 },
+  tableWrap: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: 980 },
+  th: { textAlign: 'left', padding: 11, background: '#f3f6fb', color: '#374151', fontSize: 12, borderBottom: '1px solid #e5e7eb' },
+  td: { padding: 11, borderBottom: '1px solid #e5e7eb', fontSize: 13, verticalAlign: 'top' },
+  badge: { display: 'inline-flex', borderRadius: 999, padding: '5px 9px', fontWeight: 900, fontSize: 12, background: '#eef2ff', color: '#3730a3' },
+};
+
+
+const TIPOS = ['Ingreso', 'Egreso'];
+const ESTADOS = ['Registrado', 'Pendiente', 'Anulado'];
+
+const inicial = {
+  fecha: hoyISO(),
+  tipo: 'Ingreso',
+  concepto: '',
+  unidadNegocio: 'ELANKAV VISUAL',
+  tipoFiscal: 'Sin factura',
+  facturaFiscal: 'No',
+  monto: '',
+  estado: 'Registrado',
+  referencia: '',
+  observaciones: '',
+};
 
 export default function FlujoCaja() {
   const {
@@ -38,45 +88,90 @@ export default function FlujoCaja() {
   } = useCore();
 
   const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState({
-    fecha: hoyISO(),
-    tipo: 'Ingreso',
-    concepto: '',
-    unidadNegocio: 'ELANKAV VISUAL',
-    monto: '',
-    estado: 'Registrado',
-    referencia: '',
-    observaciones: '',
-  });
+  const [form, setForm] = useState(inicial);
+
+  const limpiar = () => { setForm(inicial); setEditandoId(null); };
+
+  const cambiar = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => {
+      const nuevo = { ...prev, [name]: value };
+      if (name === 'tipoFiscal') nuevo.facturaFiscal = value === 'Con IVA' ? 'Sí' : 'No';
+      return nuevo;
+    });
+  };
+
+  const guardar = (e) => {
+    e.preventDefault();
+    if (!form.concepto.trim()) return;
+
+    const datos = {
+      ...form,
+      id: editandoId || `flujo-${Date.now()}`,
+      fecha: form.fecha || hoyISO(),
+      tipo: form.tipo || 'Ingreso',
+      concepto: form.concepto.trim(),
+      unidadNegocio: form.unidadNegocio || 'ELANKAV VISUAL',
+      tipoFiscal: form.tipoFiscal || 'Sin factura',
+      facturaFiscal: form.tipoFiscal === 'Con IVA' ? 'Sí' : form.facturaFiscal || 'No',
+      monto: numero(form.monto),
+      estado: form.estado || 'Registrado',
+      referencia: form.referencia.trim(),
+      observaciones: form.observaciones.trim(),
+      actualizado: new Date().toISOString(),
+    };
+
+    if (editandoId) actualizarMovimientoFlujoCaja(editandoId, datos);
+    else crearMovimientoFlujoCaja(datos);
+
+    limpiar();
+  };
+
+  const editar = (item) => {
+    setEditandoId(item.id);
+    setForm({
+      fecha: item.fecha || hoyISO(),
+      tipo: item.tipo || 'Ingreso',
+      concepto: item.concepto || '',
+      unidadNegocio: item.unidadNegocio || 'ELANKAV VISUAL',
+      tipoFiscal: item.tipoFiscal || 'Sin factura',
+      facturaFiscal: item.facturaFiscal || 'No',
+      monto: String(item.monto || ''),
+      estado: item.estado || 'Registrado',
+      referencia: item.referencia || '',
+      observaciones: item.observaciones || '',
+    });
+  };
 
   const resumen = useMemo(() => {
-    const ingresosCobros = cobros.reduce(
-      (total, item) => total + numero(item.montoCobrado || item.monto || item.total),
-      0
-    );
+    const ingresosCobros = cobros
+      .filter((item) => item.estado !== 'Anulado')
+      .reduce((total, item) => total + numero(item.montoCobrado), 0);
+
+    const egresosCompras = compras
+      .filter((item) => item.estado !== 'Anulada')
+      .reduce((total, item) => total + numero(item.total || item.subtotal), 0);
 
     const ingresosManuales = flujoCaja
-      .filter((item) => item.tipo === 'Ingreso' && normalizarEstado(item.estado) !== 'anulado')
+      .filter((item) => item.tipo === 'Ingreso' && item.estado !== 'Anulado')
       .reduce((total, item) => total + numero(item.monto), 0);
-
-    const egresosCompras = compras.reduce(
-      (total, item) => total + numero(item.total || item.monto || item.subtotal),
-      0
-    );
 
     const egresosManuales = flujoCaja
-      .filter((item) => item.tipo === 'Egreso' && normalizarEstado(item.estado) !== 'anulado')
+      .filter((item) => item.tipo === 'Egreso' && item.estado !== 'Anulado')
       .reduce((total, item) => total + numero(item.monto), 0);
 
-    const porCobrar = cuentasPorCobrar.reduce(
-      (total, item) => total + numero(item.saldo || item.saldoPendiente || item.montoPendiente),
-      0
-    );
+    const porCobrar = cuentasPorCobrar
+      .filter((item) => item.estado !== 'Anulada')
+      .reduce((total, item) => total + numero(item.saldo || item.saldoPendiente), 0);
 
-    const porPagar = cuentasPorPagar.reduce(
-      (total, item) => total + numero(item.saldo || item.saldoPendiente || item.montoPendiente),
-      0
-    );
+    const porPagar = cuentasPorPagar
+      .filter((item) => item.estado !== 'Anulada')
+      .reduce((total, item) => total + numero(item.saldo || item.saldoPendiente), 0);
+
+    const ivaDebito = cobros.reduce((total, item) => total + (item.tipoFiscal === 'Con IVA' ? numero(item.ivaDebito || item.iva) : 0), 0);
+    const ivaCredito = compras.reduce((total, item) => total + (item.tipoFiscal === 'Con IVA' ? numero(item.ivaCredito || item.iva) : 0), 0);
+    const ingresosSinFactura = cobros.reduce((total, item) => total + (item.tipoFiscal === 'Sin factura' ? numero(item.montoCobrado || item.montoFactura) : 0), 0);
+    const egresosSinFactura = compras.reduce((total, item) => total + (item.tipoFiscal === 'Sin factura' ? numero(item.total || item.subtotal) : 0), 0);
 
     const ingresosTotales = ingresosCobros + ingresosManuales;
     const egresosTotales = egresosCompras + egresosManuales;
@@ -92,609 +187,72 @@ export default function FlujoCaja() {
       porPagar,
       saldoOperativo: ingresosTotales - egresosTotales,
       posicionFinanciera: ingresosTotales + porCobrar - egresosTotales - porPagar,
+      ivaDebito,
+      ivaCredito,
+      ivaNeto: Math.max(ivaDebito - ivaCredito, 0),
+      saldoFiscal: ivaDebito - ivaCredito,
+      ingresosSinFactura,
+      egresosSinFactura,
+      utilidadInternaSinFactura: ingresosSinFactura - egresosSinFactura,
     };
   }, [cobros, compras, cuentasPorCobrar, cuentasPorPagar, flujoCaja]);
 
-  const resumenPorUnidad = useMemo(() => {
-    return UNIDADES_NEGOCIO.map((unidad) => {
-      const ingresosCobros = cobros
-        .filter((item) => item.unidadNegocio === unidad)
-        .reduce((total, item) => total + numero(item.montoCobrado || item.monto || item.total), 0);
-
-      const ingresosManuales = flujoCaja
-        .filter(
-          (item) =>
-            item.unidadNegocio === unidad &&
-            item.tipo === 'Ingreso' &&
-            normalizarEstado(item.estado) !== 'anulado'
-        )
-        .reduce((total, item) => total + numero(item.monto), 0);
-
-      const egresosCompras = compras
-        .filter((item) => item.unidadNegocio === unidad)
-        .reduce((total, item) => total + numero(item.total || item.monto || item.subtotal), 0);
-
-      const egresosManuales = flujoCaja
-        .filter(
-          (item) =>
-            item.unidadNegocio === unidad &&
-            item.tipo === 'Egreso' &&
-            normalizarEstado(item.estado) !== 'anulado'
-        )
-        .reduce((total, item) => total + numero(item.monto), 0);
-
-      const ingresos = ingresosCobros + ingresosManuales;
-      const egresos = egresosCompras + egresosManuales;
-
-      return {
-        unidad,
-        ingresos,
-        egresos,
-        saldo: ingresos - egresos,
-      };
-    });
-  }, [cobros, compras, flujoCaja]);
-
-  const movimientosSistema = useMemo(() => {
-    const desdeCobros = cobros.map((item) => ({
-      id: `cobro-${item.id}`,
-      fecha: item.fecha || item.fechaRegistro || '',
-      tipo: 'Ingreso',
-      concepto: `Cobro ${item.factura || item.codigo || ''}`.trim(),
-      unidadNegocio: item.unidadNegocio || 'Sin unidad',
-      monto: numero(item.montoCobrado || item.monto || item.total),
-      origen: 'Cobros',
-      estado: item.estado || 'Registrado',
-    }));
-
-    const desdeCompras = compras.map((item) => ({
-      id: `compra-${item.id}`,
-      fecha: item.fecha || item.fechaRegistro || '',
-      tipo: 'Egreso',
-      concepto: `Compra ${item.factura || item.codigo || ''}`.trim(),
-      unidadNegocio: item.unidadNegocio || 'Sin unidad',
-      monto: numero(item.total || item.monto || item.subtotal),
-      origen: 'Compras',
-      estado: item.estado || 'Registrado',
-    }));
-
-    return [...desdeCobros, ...desdeCompras]
-      .filter((item) => item.monto > 0)
-      .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
-      .slice(0, 12);
-  }, [cobros, compras]);
-
-  const cambiar = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const limpiar = () => {
-    setEditandoId(null);
-    setForm({
-      fecha: hoyISO(),
-      tipo: 'Ingreso',
-      concepto: '',
-      unidadNegocio: 'ELANKAV VISUAL',
-      monto: '',
-      estado: 'Registrado',
-      referencia: '',
-      observaciones: '',
-    });
-  };
-
-  const guardar = (e) => {
-    e.preventDefault();
-
-    if (!form.concepto.trim()) return;
-
-    const datos = {
-      ...form,
-      concepto: form.concepto.trim(),
-      referencia: form.referencia.trim(),
-      observaciones: form.observaciones.trim(),
-      monto: numero(form.monto),
-    };
-
-    if (editandoId) {
-      actualizarMovimientoFlujoCaja(editandoId, datos);
-    } else {
-      crearMovimientoFlujoCaja(datos);
-    }
-
-    limpiar();
-  };
-
-  const editar = (item) => {
-    setEditandoId(item.id);
-    setForm({
-      fecha: item.fecha || hoyISO(),
-      tipo: item.tipo || 'Ingreso',
-      concepto: item.concepto || '',
-      unidadNegocio: item.unidadNegocio || 'ELANKAV VISUAL',
-      monto: item.monto || '',
-      estado: item.estado || 'Registrado',
-      referencia: item.referencia || '',
-      observaciones: item.observaciones || '',
-    });
-  };
-
-  const eliminar = (id) => {
-    const confirmar = window.confirm('¿Eliminar este movimiento manual de flujo de caja?');
-    if (!confirmar) return;
-    eliminarMovimientoFlujoCaja(id);
-    if (editandoId === id) limpiar();
-  };
+  const resumenUnidad = useMemo(() => UNIDADES_NEGOCIO.map((unidad) => {
+    const ingresos = cobros.filter((i) => i.unidadNegocio === unidad).reduce((t, i) => t + numero(i.montoCobrado), 0)
+      + flujoCaja.filter((i) => i.unidadNegocio === unidad && i.tipo === 'Ingreso').reduce((t, i) => t + numero(i.monto), 0);
+    const egresos = compras.filter((i) => i.unidadNegocio === unidad).reduce((t, i) => t + numero(i.total || i.subtotal), 0)
+      + flujoCaja.filter((i) => i.unidadNegocio === unidad && i.tipo === 'Egreso').reduce((t, i) => t + numero(i.monto), 0);
+    return { unidad, ingresos, egresos, saldo: ingresos - egresos };
+  }), [cobros, compras, flujoCaja]);
 
   return (
-    <div className="flujo-caja-page">
-      <style>{`
-        .flujo-caja-page {
-          display: grid;
-          gap: 18px;
-        }
+    <div style={styles.page}>
+      <div style={styles.header}><h2 style={styles.title}>Flujo de Caja</h2><p style={styles.subtitle}>Caja real + lectura fiscal: IVA neto, ingresos sin factura y egresos sin factura.</p></div>
 
-        .fc-header {
-          background: linear-gradient(135deg, #0f766e, #0f3f62);
-          color: #ffffff;
-          border-radius: 20px;
-          padding: 22px;
-          box-shadow: 0 12px 28px rgba(15, 118, 110, 0.22);
-        }
+      <div style={styles.stats}>
+        <div style={styles.stat}><span style={styles.statLabel}>Ingresos totales</span><strong style={styles.statValue}>{moneda(resumen.ingresosTotales)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>Egresos totales</span><strong style={styles.statValue}>{moneda(resumen.egresosTotales)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>Saldo operativo</span><strong style={styles.statValue}>{moneda(resumen.saldoOperativo)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>Por cobrar</span><strong style={styles.statValue}>{moneda(resumen.porCobrar)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>Por pagar</span><strong style={styles.statValue}>{moneda(resumen.porPagar)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>IVA débito</span><strong style={styles.statValue}>{moneda(resumen.ivaDebito)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>IVA crédito</span><strong style={styles.statValue}>{moneda(resumen.ivaCredito)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>IVA neto estimado</span><strong style={styles.statValue}>{moneda(resumen.ivaNeto)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>Ingresos sin factura</span><strong style={styles.statValue}>{moneda(resumen.ingresosSinFactura)}</strong></div>
+        <div style={styles.stat}><span style={styles.statLabel}>Egresos sin factura</span><strong style={styles.statValue}>{moneda(resumen.egresosSinFactura)}</strong></div>
+      </div>
 
-        .fc-header h2 {
-          margin: 0;
-          font-size: 26px;
-        }
-
-        .fc-header p {
-          margin: 8px 0 0;
-          color: rgba(255,255,255,0.82);
-        }
-
-        .fc-kpis {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-        .fc-card,
-        .fc-panel {
-          background: #ffffff;
-          border-radius: 18px;
-          padding: 18px;
-          box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
-          border: 1px solid #e5e7eb;
-        }
-
-        .fc-card span {
-          display: block;
-          color: #6b7280;
-          font-size: 13px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: .4px;
-        }
-
-        .fc-card strong {
-          display: block;
-          margin-top: 8px;
-          font-size: 24px;
-          color: #111827;
-        }
-
-        .fc-positive strong { color: #047857; }
-        .fc-negative strong { color: #b91c1c; }
-        .fc-warning strong { color: #b45309; }
-
-        .fc-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
-          gap: 18px;
-        }
-
-        .fc-panel h3 {
-          margin: 0 0 14px;
-          color: #111827;
-        }
-
-        .fc-form {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        .fc-field {
-          display: grid;
-          gap: 6px;
-        }
-
-        .fc-field.full {
-          grid-column: 1 / -1;
-        }
-
-        .fc-field label {
-          font-size: 13px;
-          font-weight: 800;
-          color: #374151;
-        }
-
-        .fc-field input,
-        .fc-field select,
-        .fc-field textarea {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 12px;
-          padding: 10px 12px;
-          font: inherit;
-          background: #ffffff;
-          color: #111827;
-        }
-
-        .fc-field textarea {
-          resize: vertical;
-          min-height: 72px;
-        }
-
-        .fc-actions {
-          grid-column: 1 / -1;
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .fc-btn {
-          border: 0;
-          border-radius: 12px;
-          padding: 11px 14px;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .fc-btn.primary {
-          background: #0f766e;
-          color: #ffffff;
-        }
-
-        .fc-btn.secondary {
-          background: #e5e7eb;
-          color: #111827;
-        }
-
-        .fc-btn.danger {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-
-        .fc-table-wrap {
-          overflow-x: auto;
-        }
-
-        .fc-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 780px;
-        }
-
-        .fc-table th,
-        .fc-table td {
-          padding: 11px 10px;
-          border-bottom: 1px solid #e5e7eb;
-          text-align: left;
-          font-size: 13px;
-          vertical-align: top;
-        }
-
-        .fc-table th {
-          color: #374151;
-          background: #f9fafb;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: .4px;
-        }
-
-        .fc-pill {
-          display: inline-flex;
-          padding: 5px 9px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 900;
-          background: #eef2ff;
-          color: #3730a3;
-        }
-
-        .fc-income {
-          color: #047857;
-          font-weight: 900;
-        }
-
-        .fc-expense {
-          color: #b91c1c;
-          font-weight: 900;
-        }
-
-        .fc-unidades {
-          display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        .fc-unidad {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 16px;
-          padding: 14px;
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-        }
-
-        .fc-unidad h4 {
-          margin: 0 0 10px;
-          font-size: 14px;
-          color: #111827;
-        }
-
-        .fc-unidad p {
-          margin: 4px 0;
-          font-size: 13px;
-          color: #4b5563;
-        }
-
-        .fc-empty {
-          color: #6b7280;
-          font-size: 14px;
-          padding: 12px 0;
-        }
-
-        @media (max-width: 1100px) {
-          .fc-kpis,
-          .fc-unidades {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .fc-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 680px) {
-          .fc-kpis,
-          .fc-unidades,
-          .fc-form {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-
-      <section className="fc-header">
-        <h2>Flujo de Caja</h2>
-        <p>Control de ingresos, egresos, cuentas por cobrar y cuentas por pagar de ELANKAV GROUP.</p>
-      </section>
-
-      <section className="fc-kpis">
-        <div className="fc-card fc-positive">
-          <span>Ingresos Totales</span>
-          <strong>{formatoCordobas(resumen.ingresosTotales)}</strong>
+      <form style={styles.card} onSubmit={guardar}>
+        <div style={styles.grid}>
+          <label style={styles.label}>Fecha<input style={styles.input} type="date" name="fecha" value={form.fecha} onChange={cambiar} /></label>
+          <label style={styles.label}>Tipo<select style={styles.select} name="tipo" value={form.tipo} onChange={cambiar}>{TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
+          <label style={styles.label}>Concepto<input style={styles.input} name="concepto" value={form.concepto} onChange={cambiar} /></label>
+          <label style={styles.label}>Unidad<select style={styles.select} name="unidadNegocio" value={form.unidadNegocio} onChange={cambiar}>{UNIDADES_NEGOCIO.map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+          <label style={styles.label}>Tipo fiscal<select style={styles.select} name="tipoFiscal" value={form.tipoFiscal} onChange={cambiar}>{TIPOS_FISCALES.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
+          <label style={styles.label}>Factura fiscal<select style={styles.select} name="facturaFiscal" value={form.facturaFiscal} onChange={cambiar}><option>Sí</option><option>No</option></select></label>
+          <label style={styles.label}>Monto<input style={styles.input} type="number" step="0.01" name="monto" value={form.monto} onChange={cambiar} /></label>
+          <label style={styles.label}>Estado<select style={styles.select} name="estado" value={form.estado} onChange={cambiar}>{ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}</select></label>
+          <label style={styles.label}>Referencia<input style={styles.input} name="referencia" value={form.referencia} onChange={cambiar} /></label>
         </div>
-        <div className="fc-card fc-negative">
-          <span>Egresos Totales</span>
-          <strong>{formatoCordobas(resumen.egresosTotales)}</strong>
-        </div>
-        <div className={resumen.saldoOperativo >= 0 ? 'fc-card fc-positive' : 'fc-card fc-negative'}>
-          <span>Saldo Operativo</span>
-          <strong>{formatoCordobas(resumen.saldoOperativo)}</strong>
-        </div>
-        <div className="fc-card fc-warning">
-          <span>Por Cobrar</span>
-          <strong>{formatoCordobas(resumen.porCobrar)}</strong>
-        </div>
-        <div className="fc-card fc-warning">
-          <span>Por Pagar</span>
-          <strong>{formatoCordobas(resumen.porPagar)}</strong>
-        </div>
-        <div className={resumen.posicionFinanciera >= 0 ? 'fc-card fc-positive' : 'fc-card fc-negative'}>
-          <span>Posición Financiera</span>
-          <strong>{formatoCordobas(resumen.posicionFinanciera)}</strong>
-        </div>
-      </section>
+        <label style={{ ...styles.label, marginTop: 12 }}>Observaciones<textarea style={styles.textarea} name="observaciones" value={form.observaciones} onChange={cambiar} /></label>
+        <div style={styles.actions}><button style={styles.primary} type="submit">{editandoId ? 'Actualizar movimiento' : 'Guardar movimiento'}</button><button style={styles.secondary} type="button" onClick={limpiar}>Limpiar</button></div>
+      </form>
 
-      <section className="fc-panel">
-        <h3>Resumen por Unidad de Negocio</h3>
-        <div className="fc-unidades">
-          {resumenPorUnidad.map((item) => (
-            <div className="fc-unidad" key={item.unidad}>
-              <h4>{item.unidad}</h4>
-              <p>Ingresos: <strong className="fc-income">{formatoCordobas(item.ingresos)}</strong></p>
-              <p>Egresos: <strong className="fc-expense">{formatoCordobas(item.egresos)}</strong></p>
-              <p>Saldo: <strong>{formatoCordobas(item.saldo)}</strong></p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div style={styles.card}>
+        <h3>Resumen por unidad</h3>
+        <div style={styles.tableWrap}><table style={styles.table}>
+          <thead><tr><th style={styles.th}>Unidad</th><th style={styles.th}>Ingresos</th><th style={styles.th}>Egresos</th><th style={styles.th}>Saldo</th></tr></thead>
+          <tbody>{resumenUnidad.map((item) => <tr key={item.unidad}><td style={styles.td}>{item.unidad}</td><td style={styles.td}>{moneda(item.ingresos)}</td><td style={styles.td}>{moneda(item.egresos)}</td><td style={styles.td}>{moneda(item.saldo)}</td></tr>)}</tbody>
+        </table></div>
+      </div>
 
-      <section className="fc-grid">
-        <div className="fc-panel">
-          <h3>{editandoId ? 'Editar movimiento manual' : 'Movimiento manual'}</h3>
-          <form className="fc-form" onSubmit={guardar}>
-            <div className="fc-field">
-              <label>Fecha</label>
-              <input type="date" name="fecha" value={form.fecha} onChange={cambiar} />
-            </div>
-
-            <div className="fc-field">
-              <label>Tipo</label>
-              <select name="tipo" value={form.tipo} onChange={cambiar}>
-                {TIPOS_MOVIMIENTO.map((tipo) => (
-                  <option key={tipo} value={tipo}>{tipo}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="fc-field full">
-              <label>Concepto</label>
-              <input
-                name="concepto"
-                value={form.concepto}
-                onChange={cambiar}
-                placeholder="Ej: Pago de cliente, compra de material, gasto operativo"
-              />
-            </div>
-
-            <div className="fc-field">
-              <label>Unidad de Negocio</label>
-              <select name="unidadNegocio" value={form.unidadNegocio} onChange={cambiar}>
-                {UNIDADES_NEGOCIO.map((unidad) => (
-                  <option key={unidad} value={unidad}>{unidad}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="fc-field">
-              <label>Monto</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                name="monto"
-                value={form.monto}
-                onChange={cambiar}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="fc-field">
-              <label>Estado</label>
-              <select name="estado" value={form.estado} onChange={cambiar}>
-                {ESTADOS_MOVIMIENTO.map((estado) => (
-                  <option key={estado} value={estado}>{estado}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="fc-field">
-              <label>Referencia</label>
-              <input
-                name="referencia"
-                value={form.referencia}
-                onChange={cambiar}
-                placeholder="Factura, recibo, transferencia"
-              />
-            </div>
-
-            <div className="fc-field full">
-              <label>Observaciones</label>
-              <textarea
-                name="observaciones"
-                value={form.observaciones}
-                onChange={cambiar}
-                placeholder="Detalle adicional del movimiento"
-              />
-            </div>
-
-            <div className="fc-actions">
-              <button className="fc-btn primary" type="submit">
-                {editandoId ? 'Actualizar movimiento' : 'Registrar movimiento'}
-              </button>
-              {editandoId && (
-                <button className="fc-btn secondary" type="button" onClick={limpiar}>
-                  Cancelar edición
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-
-        <div className="fc-panel">
-          <h3>Movimientos manuales</h3>
-          <div className="fc-table-wrap">
-            <table className="fc-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Tipo</th>
-                  <th>Concepto</th>
-                  <th>Unidad</th>
-                  <th>Monto</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {flujoCaja.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="fc-empty">No hay movimientos manuales registrados.</td>
-                  </tr>
-                ) : (
-                  flujoCaja.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.fecha || '-'}</td>
-                      <td>
-                        <span className="fc-pill">{item.tipo}</span>
-                      </td>
-                      <td>
-                        <strong>{item.concepto}</strong>
-                        {item.referencia && <div>{item.referencia}</div>}
-                      </td>
-                      <td>{item.unidadNegocio || '-'}</td>
-                      <td className={item.tipo === 'Ingreso' ? 'fc-income' : 'fc-expense'}>
-                        {formatoCordobas(item.monto)}
-                      </td>
-                      <td>{item.estado}</td>
-                      <td>
-                        <button className="fc-btn secondary" type="button" onClick={() => editar(item)}>
-                          Editar
-                        </button>{' '}
-                        <button className="fc-btn danger" type="button" onClick={() => eliminar(item.id)}>
-                          Eliminar
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section className="fc-panel">
-        <h3>Movimientos automáticos recientes</h3>
-        <div className="fc-table-wrap">
-          <table className="fc-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Origen</th>
-                <th>Tipo</th>
-                <th>Concepto</th>
-                <th>Unidad</th>
-                <th>Monto</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movimientosSistema.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="fc-empty">No hay cobros ni compras con monto registrado.</td>
-                </tr>
-              ) : (
-                movimientosSistema.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.fecha ? item.fecha.toString().slice(0, 10) : '-'}</td>
-                    <td>{item.origen}</td>
-                    <td><span className="fc-pill">{item.tipo}</span></td>
-                    <td>{item.concepto}</td>
-                    <td>{item.unidadNegocio}</td>
-                    <td className={item.tipo === 'Ingreso' ? 'fc-income' : 'fc-expense'}>
-                      {formatoCordobas(item.monto)}
-                    </td>
-                    <td>{item.estado}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <div style={styles.card}>
+        <h3>Movimientos manuales</h3>
+        <div style={styles.tableWrap}><table style={styles.table}>
+          <thead><tr><th style={styles.th}>Fecha</th><th style={styles.th}>Tipo</th><th style={styles.th}>Concepto</th><th style={styles.th}>Unidad</th><th style={styles.th}>Fiscal</th><th style={styles.th}>Monto</th><th style={styles.th}>Estado</th><th style={styles.th}>Acciones</th></tr></thead>
+          <tbody>{flujoCaja.map((item) => <tr key={item.id}><td style={styles.td}>{item.fecha}</td><td style={styles.td}>{item.tipo}</td><td style={styles.td}>{item.concepto}</td><td style={styles.td}>{item.unidadNegocio}</td><td style={styles.td}><span style={styles.badge}>{item.tipoFiscal || 'Sin clasificar'}</span></td><td style={styles.td}>{moneda(item.monto)}</td><td style={styles.td}>{item.estado}</td><td style={styles.td}><button style={styles.edit} type="button" onClick={() => editar(item)}>Editar</button> <button style={styles.danger} type="button" onClick={() => eliminarMovimientoFlujoCaja(item.id)}>Eliminar</button></td></tr>)}</tbody>
+        </table></div>
+      </div>
     </div>
   );
 }

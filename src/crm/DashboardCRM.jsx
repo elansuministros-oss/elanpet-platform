@@ -1,10 +1,41 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useCore } from '../core/context/CoreContext';
 
-const formatoNumero = (valor) => new Intl.NumberFormat('es-NI').format(valor || 0);
+const UNIDADES_NEGOCIO = [
+  'ELANPET',
+  'ELANKAV VISUAL',
+  'ELANKAV CENTER',
+  'ELANKAV SOLAR',
+  'ELAN AI',
+];
 
-const obtenerFecha = (registro) =>
-  registro?.actualizado || registro?.fechaRegistro || registro?.fecha || registro?.createdAt || null;
+const IVA = 0.15;
+
+const numero = (valor) => {
+  const n = Number(valor || 0);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const formatoNumero = (valor) => new Intl.NumberFormat('es-NI').format(numero(valor));
+
+const moneda = (valor) =>
+  new Intl.NumberFormat('es-NI', {
+    style: 'currency',
+    currency: 'NIO',
+    minimumFractionDigits: 2,
+  }).format(numero(valor));
+
+const obtenerFecha = (registro = {}) =>
+  registro.actualizado ||
+  registro.fechaRegistro ||
+  registro.fecha ||
+  registro.fechaCobro ||
+  registro.fechaPago ||
+  registro.fechaCompra ||
+  registro.fechaFactura ||
+  registro.fechaVencimiento ||
+  registro.createdAt ||
+  '';
 
 const ordenarRecientes = (lista = []) =>
   [...lista]
@@ -28,23 +59,88 @@ const obtenerNombre = (registro, fallback) =>
   registro?.nombre ||
   registro?.cliente ||
   registro?.empresa ||
+  registro?.proveedor ||
   registro?.titulo ||
   registro?.codigo ||
   registro?.descripcion ||
   fallback;
 
+const unidadRegistro = (item = {}) => item.unidadNegocio || item.unidad || 'ELANKAV VISUAL';
+
+const sumar = (lista = [], selector) =>
+  lista.reduce((total, item) => total + numero(selector(item)), 0);
+
+const esConIVA = (item = {}) =>
+  item.tipoFiscal === 'Con IVA' ||
+  item.facturaFiscal === 'Sí' ||
+  numero(item.ivaDebito || item.ivaCredito || item.iva) > 0;
+
+const montoVenta = (item = {}) =>
+  numero(item.montoFactura || item.monto || item.total || item.importe || item.valor);
+
+const montoCobrado = (item = {}) =>
+  numero(item.montoCobrado || item.abonado || item.pagado || item.monto || item.total);
+
+const montoCompra = (item = {}) =>
+  numero(item.total || item.monto || item.importe || item.valor || item.subtotal);
+
+const montoSaldo = (item = {}) =>
+  numero(item.saldo || item.saldoPendiente || item.pendiente || item.montoPendiente || item.total);
+
+const montoComision = (item = {}) =>
+  numero(item.monto || item.comision || item.total || item.valor);
+
+const montoFlujo = (item = {}) => numero(item.monto || item.total || item.valor);
+
+const ivaDebito = (item = {}) => {
+  if (!esConIVA(item)) return 0;
+  if (item.ivaDebito !== undefined) return numero(item.ivaDebito);
+  if (item.iva !== undefined) return numero(item.iva);
+  const total = montoVenta(item);
+  return total - total / (1 + IVA);
+};
+
+const ivaCredito = (item = {}) => {
+  if (!esConIVA(item)) return 0;
+  if (item.ivaCredito !== undefined) return numero(item.ivaCredito);
+  if (item.iva !== undefined) return numero(item.iva);
+  const subtotal = numero(item.subtotal || item.baseImponible || 0);
+  if (subtotal > 0) return subtotal * IVA;
+  const total = montoCompra(item);
+  return total - total / (1 + IVA);
+};
+
+const rankingClientes = (cobros = [], cuentasPorCobrar = []) => {
+  const mapa = new Map();
+
+  [...cobros, ...cuentasPorCobrar].forEach((item) => {
+    const nombre = obtenerNombre(item, 'Cliente sin nombre');
+    const actual = mapa.get(nombre) || 0;
+    mapa.set(nombre, actual + montoVenta(item));
+  });
+
+  return [...mapa.entries()]
+    .map(([nombre, total]) => ({ nombre, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+};
+
 export default function DashboardCRM() {
   const {
-    empresas,
-    contactos,
-    cotizaciones,
-    pedidos,
-    ordenesTrabajo,
-    produccion,
-    cobros,
-    comisiones,
-    inventario,
-    materiales,
+    empresas = [],
+    contactos = [],
+    cotizaciones = [],
+    pedidos = [],
+    ordenesTrabajo = [],
+    produccion = [],
+    cobros = [],
+    comisiones = [],
+    inventario = [],
+    materiales = [],
+    compras = [],
+    cuentasPorCobrar = [],
+    cuentasPorPagar = [],
+    flujoCaja = [],
   } = useCore();
 
   const totalRegistros =
@@ -57,7 +153,95 @@ export default function DashboardCRM() {
     cobros.length +
     comisiones.length +
     inventario.length +
-    materiales.length;
+    materiales.length +
+    compras.length +
+    cuentasPorCobrar.length +
+    cuentasPorPagar.length +
+    flujoCaja.length;
+
+  const metricas = useMemo(() => {
+    const ventasTotales = sumar(cobros, montoVenta);
+    const cobrado = sumar(cobros, montoCobrado);
+    const comprasTotales = sumar(compras, montoCompra);
+    const porCobrar = sumar(cuentasPorCobrar, montoSaldo);
+    const porPagar = sumar(cuentasPorPagar, montoSaldo);
+    const comisionesTotales = sumar(comisiones, montoComision);
+
+    const ingresosFlujo = sumar(
+      flujoCaja.filter((item) => item.tipo === 'Ingreso'),
+      montoFlujo
+    );
+
+    const egresosFlujo = sumar(
+      flujoCaja.filter((item) => item.tipo === 'Egreso'),
+      montoFlujo
+    );
+
+    const ivaDebitoTotal = sumar(cobros, ivaDebito) + sumar(cuentasPorCobrar, ivaDebito);
+    const ivaCreditoTotal = sumar(compras, ivaCredito) + sumar(cuentasPorPagar, ivaCredito);
+
+    const utilidadBruta = ventasTotales - comprasTotales;
+    const utilidadNeta = utilidadBruta + ingresosFlujo - egresosFlujo - comisionesTotales;
+    const flujoNeto = cobrado + ingresosFlujo - comprasTotales - egresosFlujo - comisionesTotales;
+
+    const unidades = UNIDADES_NEGOCIO.map((unidad) => {
+      const cobrosUnidad = cobros.filter((item) => unidadRegistro(item) === unidad);
+      const comprasUnidad = compras.filter((item) => unidadRegistro(item) === unidad);
+      const cxcUnidad = cuentasPorCobrar.filter((item) => unidadRegistro(item) === unidad);
+      const cxpUnidad = cuentasPorPagar.filter((item) => unidadRegistro(item) === unidad);
+      const comisionesUnidadLista = comisiones.filter((item) => unidadRegistro(item) === unidad);
+      const produccionUnidadLista = produccion.filter((item) => unidadRegistro(item) === unidad);
+
+      const ventas = sumar(cobrosUnidad, montoVenta);
+      const comprasTotal = sumar(comprasUnidad, montoCompra);
+      const comisionTotal = sumar(comisionesUnidadLista, montoComision);
+
+      return {
+        unidad,
+        ventas,
+        cobrado: sumar(cobrosUnidad, montoCobrado),
+        compras: comprasTotal,
+        porCobrar: sumar(cxcUnidad, montoSaldo),
+        porPagar: sumar(cxpUnidad, montoSaldo),
+        produccionActiva: contarPorEstado(produccionUnidadLista, [
+          'pendiente',
+          'proceso',
+          'produccion',
+          'fabricacion',
+          'activo',
+        ]),
+        comisiones: comisionTotal,
+        utilidad: ventas - comprasTotal - comisionTotal,
+      };
+    }).sort((a, b) => b.ventas - a.ventas);
+
+    return {
+      ventasTotales,
+      cobrado,
+      comprasTotales,
+      porCobrar,
+      porPagar,
+      comisionesTotales,
+      ingresosFlujo,
+      egresosFlujo,
+      flujoNeto,
+      utilidadBruta,
+      utilidadNeta,
+      ivaDebitoTotal,
+      ivaCreditoTotal,
+      ivaNeto: ivaDebitoTotal - ivaCreditoTotal,
+      unidades,
+      topClientes: rankingClientes(cobros, cuentasPorCobrar),
+    };
+  }, [
+    cobros,
+    compras,
+    cuentasPorCobrar,
+    cuentasPorPagar,
+    comisiones,
+    flujoCaja,
+    produccion,
+  ]);
 
   const cotizacionesAbiertas = contarPorEstado(cotizaciones, [
     'abierta',
@@ -80,11 +264,12 @@ export default function DashboardCRM() {
     'produccion',
   ]);
 
-  const produccionPendiente = contarPorEstado(produccion, [
+  const produccionActiva = contarPorEstado(produccion, [
     'pendiente',
     'proceso',
     'produccion',
     'fabricacion',
+    'activo',
   ]);
 
   const cobrosPendientes = contarPorEstado(cobros, [
@@ -94,87 +279,86 @@ export default function DashboardCRM() {
     'por cobrar',
   ]);
 
-  const kpis = [
+  const kpisFinancieros = [
     {
-      titulo: 'Empresas',
-      valor: empresas.length,
-      icono: '🏢',
-      area: 'CRM',
-      color: '#1D4ED8',
-      fondo: '#EFF6FF',
-    },
-    {
-      titulo: 'Contactos',
-      valor: contactos.length,
-      icono: '👤',
-      area: 'CRM',
-      color: '#2563EB',
-      fondo: '#EFF6FF',
-    },
-    {
-      titulo: 'Cotizaciones',
-      valor: cotizaciones.length,
-      icono: '📄',
-      area: 'Ventas',
+      titulo: 'Ventas totales',
+      valor: moneda(metricas.ventasTotales),
+      descripcion: 'Total facturado o registrado en cobros',
+      icono: '📈',
       color: '#059669',
       fondo: '#ECFDF5',
     },
     {
-      titulo: 'Pedidos',
-      valor: pedidos.length,
-      icono: '🛒',
-      area: 'Ventas',
+      titulo: 'Cobrado',
+      valor: moneda(metricas.cobrado),
+      descripcion: 'Dinero recuperado según cobros',
+      icono: '💰',
       color: '#16A34A',
       fondo: '#F0FDF4',
     },
     {
-      titulo: 'Órdenes Trabajo',
-      valor: ordenesTrabajo.length,
-      icono: '🔧',
-      area: 'Operación',
-      color: '#EA580C',
-      fondo: '#FFF7ED',
+      titulo: 'Por cobrar',
+      valor: moneda(metricas.porCobrar),
+      descripcion: 'Saldo pendiente de clientes',
+      icono: '📌',
+      color: '#D97706',
+      fondo: '#FFFBEB',
     },
     {
-      titulo: 'Producción',
-      valor: produccion.length,
-      icono: '🏭',
-      area: 'Operación',
-      color: '#F97316',
-      fondo: '#FFF7ED',
+      titulo: 'Por pagar',
+      valor: moneda(metricas.porPagar),
+      descripcion: 'Compromisos pendientes con proveedores',
+      icono: '📉',
+      color: '#DC2626',
+      fondo: '#FEF2F2',
     },
     {
-      titulo: 'Cobros',
-      valor: cobros.length,
-      icono: '💰',
-      area: 'Finanzas',
+      titulo: 'Utilidad bruta',
+      valor: moneda(metricas.utilidadBruta),
+      descripcion: 'Ventas menos compras registradas',
+      icono: '🏗️',
+      color: '#2563EB',
+      fondo: '#EFF6FF',
+    },
+    {
+      titulo: 'Utilidad neta',
+      valor: moneda(metricas.utilidadNeta),
+      descripcion: 'Bruta + flujo - egresos - comisiones',
+      icono: '✅',
       color: '#7C3AED',
       fondo: '#F5F3FF',
     },
     {
-      titulo: 'Comisiones',
-      valor: comisiones.length,
-      icono: '💵',
-      area: 'Finanzas',
+      titulo: 'IVA neto estimado',
+      valor: moneda(metricas.ivaNeto),
+      descripcion: 'Débito fiscal menos crédito fiscal',
+      icono: '🧾',
       color: '#9333EA',
       fondo: '#FAF5FF',
     },
     {
-      titulo: 'Inventario',
-      valor: inventario.length,
-      icono: '📦',
-      area: 'Inventario',
-      color: '#92400E',
-      fondo: '#FFFBEB',
+      titulo: 'Producción activa',
+      valor: formatoNumero(produccionActiva),
+      descripcion: 'Trabajos en proceso o pendientes',
+      icono: '🏭',
+      color: '#EA580C',
+      fondo: '#FFF7ED',
     },
-    {
-      titulo: 'Materiales',
-      valor: materiales.length,
-      icono: '🧱',
-      area: 'Inventario',
-      color: '#B45309',
-      fondo: '#FEF3C7',
-    },
+  ];
+
+  const kpisOperativos = [
+    { titulo: 'Empresas', valor: empresas.length, icono: '🏢', area: 'CRM' },
+    { titulo: 'Contactos', valor: contactos.length, icono: '👤', area: 'CRM' },
+    { titulo: 'Cotizaciones', valor: cotizaciones.length, icono: '📄', area: 'Ventas' },
+    { titulo: 'Pedidos', valor: pedidos.length, icono: '🛒', area: 'Ventas' },
+    { titulo: 'Órdenes Trabajo', valor: ordenesTrabajo.length, icono: '🔧', area: 'Operación' },
+    { titulo: 'Producción', valor: produccion.length, icono: '🏭', area: 'Operación' },
+    { titulo: 'Cobros', valor: cobros.length, icono: '💰', area: 'Finanzas' },
+    { titulo: 'Compras', valor: compras.length, icono: '🧾', area: 'ERP' },
+    { titulo: 'CxC', valor: cuentasPorCobrar.length, icono: '📈', area: 'Finanzas' },
+    { titulo: 'CxP', valor: cuentasPorPagar.length, icono: '📉', area: 'Finanzas' },
+    { titulo: 'Inventario', valor: inventario.length, icono: '📦', area: 'Inventario' },
+    { titulo: 'Materiales', valor: materiales.length, icono: '🧱', area: 'Inventario' },
   ];
 
   const indicadores = [
@@ -197,8 +381,8 @@ export default function DashboardCRM() {
       icono: '🛠️',
     },
     {
-      titulo: 'Producción pendiente',
-      valor: produccionPendiente,
+      titulo: 'Producción activa',
+      valor: produccionActiva,
       descripcion: 'Trabajos en proceso de fabricación',
       icono: '🏗️',
     },
@@ -218,10 +402,13 @@ export default function DashboardCRM() {
     ...ordenesTrabajo.map((item) => ({ ...item, modulo: 'Orden de Trabajo', icono: '🔧' })),
     ...produccion.map((item) => ({ ...item, modulo: 'Producción', icono: '🏭' })),
     ...cobros.map((item) => ({ ...item, modulo: 'Cobro', icono: '💰' })),
+    ...compras.map((item) => ({ ...item, modulo: 'Compra', icono: '🧾' })),
+    ...cuentasPorCobrar.map((item) => ({ ...item, modulo: 'Cuenta por Cobrar', icono: '📈' })),
+    ...cuentasPorPagar.map((item) => ({ ...item, modulo: 'Cuenta por Pagar', icono: '📉' })),
     ...comisiones.map((item) => ({ ...item, modulo: 'Comisión', icono: '💵' })),
     ...inventario.map((item) => ({ ...item, modulo: 'Inventario', icono: '📦' })),
     ...materiales.map((item) => ({ ...item, modulo: 'Material', icono: '🧱' })),
-  ]).slice(0, 6);
+  ]).slice(0, 8);
 
   const alertas = [
     totalRegistros === 0
@@ -242,25 +429,33 @@ export default function DashboardCRM() {
     produccion.length > 0 && cobros.length === 0
       ? 'Hay producción registrada sin cobros asociados.'
       : null,
+    metricas.porCobrar > 0
+      ? `Hay ${moneda(metricas.porCobrar)} pendiente por cobrar.`
+      : null,
+    metricas.porPagar > 0
+      ? `Hay ${moneda(metricas.porPagar)} pendiente por pagar.`
+      : null,
+    metricas.ivaNeto > 0
+      ? `IVA neto estimado a favor de DGI: ${moneda(metricas.ivaNeto)}.`
+      : null,
   ].filter(Boolean);
 
   const unidades = [
-    { nombre: 'ELANPET', estado: 'Publicado', icono: '🐾' },
-    { nombre: 'ELAN SUMINISTROS', estado: 'Futuro módulo', icono: '📦' },
-    { nombre: 'ZONA A', estado: 'Futuro módulo', icono: '🏪' },
-    { nombre: 'ABADON', estado: 'Futuro módulo', icono: '🦬' },
-    { nombre: 'K&R TEXTIL', estado: 'Futuro módulo', icono: '👕' },
-    { nombre: 'ELAN AI', estado: 'Futuro módulo', icono: '🤖' },
+    { nombre: 'ELANPET', estado: 'Publicado / operativo', icono: '🐾' },
+    { nombre: 'ELANKAV VISUAL', estado: 'Rotulación, impresión y publicidad visual', icono: '🎨' },
+    { nombre: 'ELANKAV CENTER', estado: 'Construcción, remodelación y proyectos especiales', icono: '🏗️' },
+    { nombre: 'ELANKAV SOLAR', estado: 'Energía solar y bombeo', icono: '☀️' },
+    { nombre: 'ELAN AI', estado: 'CRM, ERP, IA y automatización', icono: '🤖' },
   ];
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
         <div>
-          <p style={styles.preTitulo}>FASE 3.2 · Panel Ejecutivo</p>
+          <p style={styles.preTitulo}>FASE 5.3 · Dashboard Ejecutivo Corporativo</p>
           <h1 style={styles.titulo}>CRM CENTRAL ELANKAV</h1>
           <p style={styles.subtitulo}>
-            Control maestro para ventas, operación, producción, cobros e integración futura de unidades.
+            Control maestro de ventas, cobros, cuentas, utilidad, fiscalidad, producción y unidades oficiales de ELANKAV GROUP.
           </p>
         </div>
 
@@ -271,25 +466,23 @@ export default function DashboardCRM() {
         </div>
       </div>
 
-      <div style={styles.kpiGrid}>
-        {kpis.map((card) => (
+      <div style={styles.finanzasGrid}>
+        {kpisFinancieros.map((card) => (
           <div
             key={card.titulo}
             style={{
-              ...styles.kpiCard,
+              ...styles.kpiFinanciero,
               background: card.fondo,
               borderLeft: `5px solid ${card.color}`,
             }}
           >
             <div style={styles.kpiTop}>
               <span style={styles.kpiIcono}>{card.icono}</span>
-              <span style={{ ...styles.kpiArea, color: card.color }}>{card.area}</span>
+              <span style={{ ...styles.kpiArea, color: card.color }}>Ejecutivo</span>
             </div>
-
             <div style={styles.kpiTitulo}>{card.titulo}</div>
-            <div style={{ ...styles.kpiValor, color: card.color }}>
-              {formatoNumero(card.valor)}
-            </div>
+            <div style={{ ...styles.kpiValorMoneda, color: card.color }}>{card.valor}</div>
+            <p style={styles.kpiDescripcion}>{card.descripcion}</p>
           </div>
         ))}
       </div>
@@ -339,8 +532,8 @@ export default function DashboardCRM() {
         </section>
 
         <aside style={styles.panel}>
-          <h2 style={styles.sectionTitle}>Alertas</h2>
-          <p style={styles.sectionText}>Lectura rápida del estado actual.</p>
+          <h2 style={styles.sectionTitle}>Alertas Ejecutivas</h2>
+          <p style={styles.sectionText}>Lectura rápida de riesgo operativo, financiero y fiscal.</p>
 
           <div style={styles.alertasBox}>
             {alertas.length === 0 ? (
@@ -356,7 +549,84 @@ export default function DashboardCRM() {
         </aside>
       </div>
 
+      <div style={styles.panel}>
+        <div style={styles.sectionHeader}>
+          <div>
+            <h2 style={styles.sectionTitle}>Ranking por Unidad de Negocio</h2>
+            <p style={styles.sectionText}>Comparativo ejecutivo por ventas, cobros, cuentas, producción y utilidad.</p>
+          </div>
+        </div>
+
+        <div style={styles.tableWrap}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Unidad</th>
+                <th style={styles.th}>Ventas</th>
+                <th style={styles.th}>Cobrado</th>
+                <th style={styles.th}>Compras</th>
+                <th style={styles.th}>Por cobrar</th>
+                <th style={styles.th}>Por pagar</th>
+                <th style={styles.th}>Producción activa</th>
+                <th style={styles.th}>Comisiones</th>
+                <th style={styles.th}>Utilidad estimada</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metricas.unidades.map((item) => (
+                <tr key={item.unidad}>
+                  <td style={styles.td}><strong>{item.unidad}</strong></td>
+                  <td style={styles.td}>{moneda(item.ventas)}</td>
+                  <td style={styles.td}>{moneda(item.cobrado)}</td>
+                  <td style={styles.td}>{moneda(item.compras)}</td>
+                  <td style={styles.td}>{moneda(item.porCobrar)}</td>
+                  <td style={styles.td}>{moneda(item.porPagar)}</td>
+                  <td style={styles.td}>{formatoNumero(item.produccionActiva)}</td>
+                  <td style={styles.td}>{moneda(item.comisiones)}</td>
+                  <td style={styles.td}><strong>{moneda(item.utilidad)}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style={styles.kpiGrid}>
+        {kpisOperativos.map((card) => (
+          <div key={card.titulo} style={styles.kpiCard}>
+            <div style={styles.kpiTop}>
+              <span style={styles.kpiIcono}>{card.icono}</span>
+              <span style={styles.kpiArea}>{card.area}</span>
+            </div>
+
+            <div style={styles.kpiTitulo}>{card.titulo}</div>
+            <div style={styles.kpiValor}>{formatoNumero(card.valor)}</div>
+          </div>
+        ))}
+      </div>
+
       <div style={styles.bottomGrid}>
+        <section style={styles.panel}>
+          <h2 style={styles.sectionTitle}>Top Clientes</h2>
+          <p style={styles.sectionText}>Clientes con mayor movimiento registrado.</p>
+
+          <div style={styles.actividadLista}>
+            {metricas.topClientes.length === 0 ? (
+              <p style={styles.vacio}>Todavía no hay clientes con ventas registradas.</p>
+            ) : (
+              metricas.topClientes.map((cliente, index) => (
+                <div key={cliente.nombre} style={styles.actividadItem}>
+                  <span style={styles.actividadIcono}>#{index + 1}</span>
+                  <div>
+                    <strong>{cliente.nombre}</strong>
+                    <p style={styles.actividadTexto}>{moneda(cliente.total)}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
         <section style={styles.panel}>
           <h2 style={styles.sectionTitle}>Últimas actividades</h2>
           <p style={styles.sectionText}>Preparado para auditoría y seguimiento multiusuario.</p>
@@ -381,31 +651,13 @@ export default function DashboardCRM() {
         </section>
 
         <section style={styles.panel}>
-          <h2 style={styles.sectionTitle}>Gráficas futuras</h2>
-          <p style={styles.sectionText}>Espacio reservado para métricas financieras y operativas.</p>
-
-          <div style={styles.graficaPlaceholder}>
-            <div style={styles.barraUno} />
-            <div style={styles.barraDos} />
-            <div style={styles.barraTres} />
-            <div style={styles.barraCuatro} />
-          </div>
-
-          <div style={styles.leyendaGrafica}>
-            <span>Ventas</span>
-            <span>Cobros</span>
-            <span>Producción</span>
-          </div>
-        </section>
-
-        <section style={styles.panel}>
           <h2 style={styles.sectionTitle}>Unidades ELANKAV</h2>
-          <p style={styles.sectionText}>Preparado para operar como grupo empresarial.</p>
+          <p style={styles.sectionText}>Estructura oficial activa del grupo empresarial.</p>
 
           <div style={styles.unidadesLista}>
             {unidades.map((unidad) => (
               <div key={unidad.nombre} style={styles.unidadItem}>
-                <span>{unidad.icono}</span>
+                <span style={styles.unidadIcono}>{unidad.icono}</span>
                 <div>
                   <strong>{unidad.nombre}</strong>
                   <p style={styles.unidadEstado}>{unidad.estado}</p>
@@ -450,7 +702,7 @@ const styles = {
   subtitulo: {
     margin: '8px 0 0',
     color: '#6B7280',
-    maxWidth: '720px',
+    maxWidth: '780px',
   },
   resumenPrincipal: {
     background: '#111827',
@@ -477,6 +729,18 @@ const styles = {
     color: '#D1D5DB',
     fontSize: '13px',
   },
+  finanzasGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+    gap: '14px',
+    marginBottom: '18px',
+  },
+  kpiFinanciero: {
+    borderRadius: '16px',
+    padding: '16px',
+    boxShadow: '0 8px 22px rgba(15,23,42,0.07)',
+    minHeight: '148px',
+  },
   kpiGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
@@ -488,6 +752,8 @@ const styles = {
     padding: '16px',
     boxShadow: '0 8px 22px rgba(15,23,42,0.07)',
     minHeight: '126px',
+    background: '#FFFFFF',
+    border: '1px solid #E5E7EB',
   },
   kpiTop: {
     display: 'flex',
@@ -502,6 +768,7 @@ const styles = {
     fontSize: '11px',
     fontWeight: 800,
     textTransform: 'uppercase',
+    color: '#6B7280',
   },
   kpiTitulo: {
     fontSize: '13px',
@@ -512,6 +779,18 @@ const styles = {
     fontSize: '31px',
     fontWeight: 900,
     marginTop: '3px',
+    color: '#111827',
+  },
+  kpiValorMoneda: {
+    fontSize: '24px',
+    fontWeight: 950,
+    marginTop: '5px',
+  },
+  kpiDescripcion: {
+    margin: '7px 0 0',
+    color: '#6B7280',
+    fontSize: '12px',
+    lineHeight: 1.35,
   },
   mainGrid: {
     display: 'grid',
@@ -521,7 +800,7 @@ const styles = {
   },
   bottomGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: '18px',
   },
   panelGrande: {
@@ -535,6 +814,7 @@ const styles = {
     borderRadius: '18px',
     padding: '20px',
     boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
+    marginBottom: '18px',
   },
   sectionHeader: {
     display: 'flex',
@@ -628,6 +908,30 @@ const styles = {
     fontSize: '13px',
     fontWeight: 700,
   },
+  tableWrap: {
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '1040px',
+  },
+  th: {
+    textAlign: 'left',
+    padding: '11px',
+    background: '#F3F6FB',
+    color: '#374151',
+    fontSize: '12px',
+    borderBottom: '1px solid #E5E7EB',
+    whiteSpace: 'nowrap',
+  },
+  td: {
+    padding: '11px',
+    borderBottom: '1px solid #E5E7EB',
+    fontSize: '13px',
+    verticalAlign: 'top',
+    whiteSpace: 'nowrap',
+  },
   actividadLista: {
     display: 'flex',
     flexDirection: 'column',
@@ -644,6 +948,9 @@ const styles = {
   },
   actividadIcono: {
     fontSize: '20px',
+    minWidth: '34px',
+    fontWeight: 900,
+    color: '#123F7A',
   },
   actividadTexto: {
     margin: '3px 0 0',
@@ -654,47 +961,6 @@ const styles = {
     margin: 0,
     color: '#6B7280',
     fontSize: '13px',
-  },
-  graficaPlaceholder: {
-    height: '180px',
-    display: 'flex',
-    alignItems: 'flex-end',
-    gap: '14px',
-    padding: '16px',
-    background: '#F9FAFB',
-    border: '1px dashed #D1D5DB',
-    borderRadius: '14px',
-  },
-  barraUno: {
-    width: '22%',
-    height: '45%',
-    borderRadius: '12px 12px 0 0',
-    background: '#DBEAFE',
-  },
-  barraDos: {
-    width: '22%',
-    height: '75%',
-    borderRadius: '12px 12px 0 0',
-    background: '#DCFCE7',
-  },
-  barraTres: {
-    width: '22%',
-    height: '58%',
-    borderRadius: '12px 12px 0 0',
-    background: '#FFEDD5',
-  },
-  barraCuatro: {
-    width: '22%',
-    height: '88%',
-    borderRadius: '12px 12px 0 0',
-    background: '#EDE9FE',
-  },
-  leyendaGrafica: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    color: '#6B7280',
-    fontSize: '12px',
-    marginTop: '10px',
   },
   unidadesLista: {
     display: 'grid',
@@ -708,6 +974,9 @@ const styles = {
     border: '1px solid #E5E7EB',
     borderRadius: '12px',
     padding: '11px',
+  },
+  unidadIcono: {
+    fontSize: '20px',
   },
   unidadEstado: {
     margin: '2px 0 0',

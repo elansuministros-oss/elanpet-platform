@@ -9,7 +9,43 @@ const UNIDADES_NEGOCIO = [
   'ELAN AI',
 ];
 
+const MONEDAS = ['C$', 'USD'];
+
 const fechaActual = () => new Date().toISOString().slice(0, 10);
+
+const numero = (valor) => Number(valor || 0);
+
+const dinero = (valor, moneda = 'C$') => {
+  const currency = moneda === 'USD' ? 'USD' : 'NIO';
+
+  return new Intl.NumberFormat('es-NI', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(numero(valor));
+};
+
+const porcentaje = (valor) => `${numero(valor).toFixed(2)}%`;
+
+const calcularCostos = (datos = {}) => {
+  const venta = numero(datos.total || datos.valorVenta || datos.precioVenta);
+  const materiales = numero(datos.costoMateriales);
+  const manoObra = numero(datos.costoManoObra);
+  const transporte = numero(datos.costoTransporte);
+  const instalacion = numero(datos.costoInstalacion);
+  const otros = numero(datos.otrosCostos);
+
+  const costoTotal = materiales + manoObra + transporte + instalacion + otros;
+  const utilidad = venta - costoTotal;
+  const margen = venta > 0 ? (utilidad / venta) * 100 : 0;
+
+  return {
+    venta,
+    costoTotal,
+    utilidad,
+    margen,
+  };
+};
 
 const formInicial = () => ({
   codigo: '',
@@ -29,6 +65,7 @@ const formInicial = () => ({
   unidadNegocio: 'ELANKAV VISUAL',
   cantidad: '',
   total: '',
+  moneda: 'C$',
   material: '',
   materiales: '',
   medidas: '',
@@ -38,6 +75,11 @@ const formInicial = () => ({
   etapa: 'Pendiente',
   prioridad: 'Media',
   avance: '',
+  costoMateriales: '',
+  costoManoObra: '',
+  costoTransporte: '',
+  costoInstalacion: '',
+  otrosCostos: '',
   nota: '',
 });
 
@@ -61,13 +103,49 @@ export default function Produccion() {
     });
   }, [ordenesTrabajo]);
 
-  const obtenerEmpresaNombre = (orden) => {
-    return orden.empresaNombre || orden.empresa || orden.cliente || '';
-  };
+  const resumen = useMemo(() => {
+    return produccion.reduce(
+      (acc, item) => {
+        const calculo = calcularCostos(item);
+        acc.venta += calculo.venta;
+        acc.costo += calculo.costoTotal;
+        acc.utilidad += calculo.utilidad;
 
-  const obtenerContactoNombre = (orden) => {
-    return orden.contactoNombre || orden.contacto || '';
-  };
+        if (['Pendiente', 'En proceso', 'Producción', 'Fabricación'].includes(item.etapa)) {
+          acc.activa += 1;
+        }
+
+        if (['Terminada', 'Finalizada', 'Entregada'].includes(item.etapa)) {
+          acc.terminada += 1;
+        }
+
+        return acc;
+      },
+      { venta: 0, costo: 0, utilidad: 0, activa: 0, terminada: 0 }
+    );
+  }, [produccion]);
+
+  const produccionFiltrada = useMemo(() => {
+    const texto = busqueda.toLowerCase().trim();
+
+    if (!texto) return produccion;
+
+    return produccion.filter((item) => {
+      return [
+        item.codigo,
+        item.ordenTrabajoCodigo,
+        item.cliente,
+        item.empresaNombre,
+        item.producto,
+        item.unidadNegocio,
+        item.etapa,
+        item.responsable,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(texto);
+    });
+  }, [produccion, busqueda]);
 
   const cambiarFormulario = (e) => {
     const { name, value } = e.target;
@@ -92,18 +170,14 @@ export default function Produccion() {
             cliente: '',
             telefono: '',
             producto: '',
-            cantidad: '',
             total: '',
-            material: '',
-            materiales: '',
-            medidas: '',
-            nota: prev.nota,
+            costoMateriales: '',
+            costoManoObra: '',
+            costoTransporte: '',
+            costoInstalacion: '',
+            otrosCostos: '',
           };
         }
-
-        const empresaNombre = obtenerEmpresaNombre(ordenSeleccionada);
-        const contactoNombre = obtenerContactoNombre(ordenSeleccionada);
-        const materiales = ordenSeleccionada.materiales || ordenSeleccionada.material || '';
 
         return {
           ...prev,
@@ -114,19 +188,23 @@ export default function Produccion() {
           cotizacionId: ordenSeleccionada.cotizacionId || '',
           cotizacionCodigo: ordenSeleccionada.cotizacionCodigo || '',
           empresaId: ordenSeleccionada.empresaId || '',
-          empresaNombre,
+          empresaNombre: ordenSeleccionada.empresaNombre || ordenSeleccionada.cliente || '',
           contactoId: ordenSeleccionada.contactoId || '',
-          contactoNombre,
-          cliente: empresaNombre,
+          contactoNombre: ordenSeleccionada.contactoNombre || '',
+          cliente: ordenSeleccionada.cliente || ordenSeleccionada.empresaNombre || '',
           telefono: ordenSeleccionada.telefono || '',
           producto: ordenSeleccionada.producto || ordenSeleccionada.descripcion || '',
-          unidadNegocio: ordenSeleccionada.unidadNegocio || 'ELANKAV VISUAL',
-          cantidad: String(ordenSeleccionada.cantidad || ''),
-          total: String(ordenSeleccionada.total || ''),
-          material: materiales,
-          materiales,
-          medidas: ordenSeleccionada.medidas || '',
-          nota: prev.nota || ordenSeleccionada.observaciones || '',
+          unidadNegocio: ordenSeleccionada.unidadNegocio || prev.unidadNegocio,
+          cantidad: ordenSeleccionada.cantidad || prev.cantidad,
+          total: ordenSeleccionada.total || prev.total,
+          moneda: ordenSeleccionada.moneda || prev.moneda,
+          materiales: ordenSeleccionada.materiales || prev.materiales,
+          medidas: ordenSeleccionada.medidas || prev.medidas,
+          costoMateriales: ordenSeleccionada.costoMateriales || prev.costoMateriales,
+          costoManoObra: ordenSeleccionada.costoManoObra || prev.costoManoObra,
+          costoTransporte: ordenSeleccionada.costoTransporte || prev.costoTransporte,
+          costoInstalacion: ordenSeleccionada.costoInstalacion || prev.costoInstalacion,
+          otrosCostos: ordenSeleccionada.otrosCostos || prev.otrosCostos,
         };
       }
 
@@ -134,221 +212,122 @@ export default function Produccion() {
     });
   };
 
-  const limpiarFormulario = () => {
+  const limpiar = () => {
     setFormulario(formInicial());
     setEditandoId(null);
   };
 
-  const guardarOrden = (e) => {
+  const guardarProduccion = (e) => {
     e.preventDefault();
 
-    if (!formulario.ordenTrabajoId && !formulario.cliente.trim()) {
-      alert('Debés seleccionar una orden de trabajo o indicar el cliente.');
-      return;
-    }
+    if (!formulario.producto.trim()) return;
 
-    if (!formulario.producto.trim()) {
-      alert('Debés indicar el producto o trabajo a producir.');
-      return;
-    }
+    const calculo = calcularCostos(formulario);
 
-    const ordenSeleccionada = ordenesTrabajo.find(
-      (orden) => orden.id === formulario.ordenTrabajoId
-    );
-
-    const empresaNombre =
-      formulario.empresaNombre ||
-      (ordenSeleccionada ? obtenerEmpresaNombre(ordenSeleccionada) : '') ||
-      formulario.cliente;
-
-    const contactoNombre =
-      formulario.contactoNombre ||
-      (ordenSeleccionada ? obtenerContactoNombre(ordenSeleccionada) : '');
-
-    const datosOrden = {
+    const datos = {
+      ...formulario,
+      id: editandoId || formulario.id,
       codigo: formulario.codigo.trim() || `PROD-${Date.now()}`,
-      ordenTrabajoId: formulario.ordenTrabajoId,
-      ordenTrabajoCodigo:
-        formulario.ordenTrabajoCodigo || ordenSeleccionada?.codigo || '',
-      pedidoId: formulario.pedidoId || ordenSeleccionada?.pedidoId || '',
-      pedidoCodigo: formulario.pedidoCodigo || ordenSeleccionada?.pedidoCodigo || '',
-      cotizacionId: formulario.cotizacionId || ordenSeleccionada?.cotizacionId || '',
-      cotizacionCodigo:
-        formulario.cotizacionCodigo || ordenSeleccionada?.cotizacionCodigo || '',
-      empresaId: formulario.empresaId || ordenSeleccionada?.empresaId || '',
-      empresaNombre,
-      contactoId: formulario.contactoId || ordenSeleccionada?.contactoId || '',
-      contactoNombre,
-      cliente: formulario.cliente.trim() || empresaNombre,
-      telefono: formulario.telefono.trim(),
+      cliente: formulario.cliente.trim(),
       producto: formulario.producto.trim(),
-      unidadNegocio: formulario.unidadNegocio,
-      cantidad: Number(formulario.cantidad) || 0,
-      total: Number(formulario.total) || 0,
+      responsable: formulario.responsable.trim(),
       material: formulario.material.trim(),
       materiales: formulario.materiales.trim(),
       medidas: formulario.medidas.trim(),
-      responsable: formulario.responsable.trim(),
-      fechaInicio: formulario.fechaInicio,
-      fechaEntrega: formulario.fechaEntrega,
-      etapa: formulario.etapa,
-      prioridad: formulario.prioridad,
-      avance: Number(formulario.avance || 0),
       nota: formulario.nota.trim(),
+      cantidad: numero(formulario.cantidad),
+      total: numero(formulario.total),
+      avance: numero(formulario.avance),
+      costoMateriales: numero(formulario.costoMateriales),
+      costoManoObra: numero(formulario.costoManoObra),
+      costoTransporte: numero(formulario.costoTransporte),
+      costoInstalacion: numero(formulario.costoInstalacion),
+      otrosCostos: numero(formulario.otrosCostos),
+      costoTotal: calculo.costoTotal,
+      utilidadReal: calculo.utilidad,
+      margenReal: calculo.margen,
       actualizado: new Date().toISOString(),
     };
 
     if (editandoId) {
-      actualizarProduccion(editandoId, datosOrden);
+      actualizarProduccion(editandoId, datos);
     } else {
-      crearProduccion(datosOrden);
+      crearProduccion(datos);
     }
 
-    limpiarFormulario();
+    limpiar();
   };
 
   const editarOrden = (orden) => {
-    const ordenTrabajo = ordenesTrabajo.find(
-      (item) => item.id === orden.ordenTrabajoId
-    );
-
-    setFormulario({
-      codigo: orden.codigo || '',
-      ordenTrabajoId: orden.ordenTrabajoId || '',
-      ordenTrabajoCodigo: orden.ordenTrabajoCodigo || ordenTrabajo?.codigo || '',
-      pedidoId: orden.pedidoId || ordenTrabajo?.pedidoId || '',
-      pedidoCodigo: orden.pedidoCodigo || ordenTrabajo?.pedidoCodigo || '',
-      cotizacionId: orden.cotizacionId || ordenTrabajo?.cotizacionId || '',
-      cotizacionCodigo:
-        orden.cotizacionCodigo || ordenTrabajo?.cotizacionCodigo || '',
-      empresaId: orden.empresaId || ordenTrabajo?.empresaId || '',
-      empresaNombre:
-        orden.empresaNombre ||
-        (ordenTrabajo ? obtenerEmpresaNombre(ordenTrabajo) : '') ||
-        orden.empresa ||
-        orden.cliente ||
-        '',
-      contactoId: orden.contactoId || ordenTrabajo?.contactoId || '',
-      contactoNombre:
-        orden.contactoNombre ||
-        (ordenTrabajo ? obtenerContactoNombre(ordenTrabajo) : '') ||
-        orden.contacto ||
-        '',
-      cliente:
-        orden.cliente ||
-        orden.empresaNombre ||
-        (ordenTrabajo ? obtenerEmpresaNombre(ordenTrabajo) : '') ||
-        '',
-      telefono: orden.telefono || ordenTrabajo?.telefono || '',
-      producto: orden.producto || ordenTrabajo?.producto || '',
-      unidadNegocio: orden.unidadNegocio || ordenTrabajo?.unidadNegocio || 'ELANKAV VISUAL',
-      cantidad: String(orden.cantidad || ordenTrabajo?.cantidad || ''),
-      total: String(orden.total || ordenTrabajo?.total || ''),
-      material: orden.material || orden.materiales || ordenTrabajo?.materiales || '',
-      materiales: orden.materiales || ordenTrabajo?.materiales || '',
-      medidas: orden.medidas || ordenTrabajo?.medidas || '',
-      responsable: orden.responsable || '',
-      fechaInicio: orden.fechaInicio || fechaActual(),
-      fechaEntrega: orden.fechaEntrega || '',
-      etapa: orden.etapa || 'Pendiente',
-      prioridad: orden.prioridad || 'Media',
-      avance: String(orden.avance || ''),
-      nota: orden.nota || orden.observaciones || '',
-    });
-
     setEditandoId(orden.id);
+    setFormulario({
+      ...formInicial(),
+      ...orden,
+      cantidad: orden.cantidad ?? '',
+      total: orden.total ?? '',
+      avance: orden.avance ?? '',
+      costoMateriales: orden.costoMateriales ?? '',
+      costoManoObra: orden.costoManoObra ?? '',
+      costoTransporte: orden.costoTransporte ?? '',
+      costoInstalacion: orden.costoInstalacion ?? '',
+      otrosCostos: orden.otrosCostos ?? '',
+    });
   };
 
   const eliminarOrden = (id) => {
-    const confirmar = window.confirm(
-      '¿Seguro que querés eliminar esta orden de producción?'
-    );
-    if (!confirmar) return;
-
     eliminarProduccion(id);
-
-    if (editandoId === id) {
-      limpiarFormulario();
-    }
+    if (editandoId === id) limpiar();
   };
 
-  const ordenesFiltradas = useMemo(() => {
-    return produccion.filter((orden) =>
-      `${orden.codigo} ${orden.ordenTrabajoCodigo} ${orden.pedidoCodigo} ${orden.cotizacionCodigo} ${orden.cliente} ${orden.empresaNombre} ${orden.contactoNombre} ${orden.producto} ${orden.material} ${orden.materiales} ${orden.responsable} ${orden.etapa} ${orden.prioridad}`
-        .toLowerCase()
-        .includes(busqueda.toLowerCase())
-    );
-  }, [produccion, busqueda]);
-
-  const resumen = useMemo(() => {
-    return {
-      total: produccion.length,
-      pendientes: produccion.filter((orden) => orden.etapa === 'Pendiente')
-        .length,
-      produccion: produccion.filter((orden) => orden.etapa === 'Fabricando')
-        .length,
-      listas: produccion.filter((orden) => orden.etapa === 'Completado').length,
-      entregadas: produccion.filter((orden) => orden.etapa === 'Cancelado')
-        .length,
-    };
-  }, [produccion]);
+  const margenGeneral = resumen.venta > 0 ? (resumen.utilidad / resumen.venta) * 100 : 0;
 
   return (
     <div className="crm-page">
       <div className="crm-page-header">
         <div>
           <h2>Producción</h2>
-          <p>
-            Control conectado a órdenes de trabajo, pedidos, cotizaciones,
-            empresas y contactos.
-          </p>
+          <p>Control de fabricación con costos reales, utilidad y margen por trabajo.</p>
         </div>
       </div>
 
       <div className="crm-stats">
         <div className="crm-stat-card">
-          <span>Órdenes</span>
-          <strong>{resumen.total}</strong>
+          <span>Venta producida</span>
+          <strong>{dinero(resumen.venta)}</strong>
         </div>
-
         <div className="crm-stat-card">
-          <span>Pendientes</span>
-          <strong>{resumen.pendientes}</strong>
+          <span>Costo real</span>
+          <strong>{dinero(resumen.costo)}</strong>
         </div>
-
         <div className="crm-stat-card">
-          <span>Fabricando</span>
-          <strong>{resumen.produccion}</strong>
+          <span>Utilidad real</span>
+          <strong>{dinero(resumen.utilidad)}</strong>
         </div>
-
         <div className="crm-stat-card">
-          <span>Completadas</span>
-          <strong>{resumen.listas}</strong>
+          <span>Margen real</span>
+          <strong>{porcentaje(margenGeneral)}</strong>
         </div>
-
         <div className="crm-stat-card">
-          <span>Canceladas</span>
-          <strong>{resumen.entregadas}</strong>
+          <span>Producción activa</span>
+          <strong>{resumen.activa}</strong>
+        </div>
+        <div className="crm-stat-card">
+          <span>Terminada</span>
+          <strong>{resumen.terminada}</strong>
         </div>
       </div>
 
-      <div className="crm-grid">
-        <form className="crm-card" onSubmit={guardarOrden}>
-          <h3>{editandoId ? 'Editar orden' : 'Nueva orden de producción'}</h3>
+      <div className="crm-card">
+        <h3>{editandoId ? 'Editar producción' : 'Nueva producción'}</h3>
 
+        <form onSubmit={guardarProduccion} className="crm-form-grid">
           <label>
             Orden de trabajo
-            <select
-              name="ordenTrabajoId"
-              value={formulario.ordenTrabajoId}
-              onChange={cambiarFormulario}
-            >
-              <option value="">Seleccionar orden de trabajo</option>
+            <select name="ordenTrabajoId" value={formulario.ordenTrabajoId} onChange={cambiarFormulario}>
+              <option value="">Sin orden relacionada</option>
               {ordenesTrabajoDisponibles.map((orden) => (
                 <option key={orden.id} value={orden.id}>
-                  {orden.codigo || 'Sin código'} -{' '}
-                  {obtenerEmpresaNombre(orden) || 'Sin cliente'} -{' '}
-                  {orden.producto || orden.descripcion || 'Sin trabajo'}
+                  {orden.codigo || orden.id} · {orden.cliente || orden.empresaNombre || 'Sin cliente'}
                 </option>
               ))}
             </select>
@@ -356,319 +335,233 @@ export default function Produccion() {
 
           <label>
             Código producción
-            <input
-              name="codigo"
-              value={formulario.codigo}
-              onChange={cambiarFormulario}
-              placeholder="Ej: PROD-0001"
-            />
+            <input name="codigo" value={formulario.codigo} onChange={cambiarFormulario} placeholder="Automático" />
           </label>
-
-          <label>
-            Empresa / Cliente
-            <input
-              name="cliente"
-              value={formulario.cliente}
-              onChange={cambiarFormulario}
-              placeholder="Se completa desde la OT"
-              readOnly={Boolean(formulario.ordenTrabajoId)}
-            />
-          </label>
-
-          <label>
-            Contacto
-            <input
-              name="contactoNombre"
-              value={formulario.contactoNombre}
-              onChange={cambiarFormulario}
-              placeholder="Contacto relacionado"
-              readOnly={Boolean(formulario.ordenTrabajoId)}
-            />
-          </label>
-
 
           <label>
             Unidad de negocio
-            <select
-              name="unidadNegocio"
-              value={formulario.unidadNegocio}
-              onChange={cambiarFormulario}
-            >
+            <select name="unidadNegocio" value={formulario.unidadNegocio} onChange={cambiarFormulario}>
               {UNIDADES_NEGOCIO.map((unidad) => (
-                <option key={unidad} value={unidad}>
-                  {unidad}
-                </option>
+                <option key={unidad} value={unidad}>{unidad}</option>
               ))}
             </select>
           </label>
 
           <label>
-            Pedido relacionado
-            <input
-              name="pedidoCodigo"
-              value={formulario.pedidoCodigo}
-              onChange={cambiarFormulario}
-              placeholder="Se completa desde la OT"
-              readOnly={Boolean(formulario.ordenTrabajoId)}
-            />
+            Cliente
+            <input name="cliente" value={formulario.cliente} onChange={cambiarFormulario} />
           </label>
 
           <label>
-            Cotización relacionada
-            <input
-              name="cotizacionCodigo"
-              value={formulario.cotizacionCodigo}
-              onChange={cambiarFormulario}
-              placeholder="Se completa desde la OT"
-              readOnly={Boolean(formulario.ordenTrabajoId)}
-            />
-          </label>
-
-          <label>
-            Producto / Trabajo
-            <input
-              name="producto"
-              value={formulario.producto}
-              onChange={cambiarFormulario}
-              placeholder="Ej: Rótulo luminoso, impresión, acrílico..."
-              readOnly={Boolean(formulario.ordenTrabajoId)}
-            />
+            Producto / trabajo
+            <input name="producto" value={formulario.producto} onChange={cambiarFormulario} />
           </label>
 
           <label>
             Cantidad
-            <input
-              name="cantidad"
-              type="number"
-              min="0"
-              value={formulario.cantidad}
-              onChange={cambiarFormulario}
-              placeholder="0"
-            />
+            <input name="cantidad" type="number" step="0.01" value={formulario.cantidad} onChange={cambiarFormulario} />
           </label>
 
           <label>
-            Total relacionado
-            <input
-              name="total"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formulario.total}
-              onChange={cambiarFormulario}
-              placeholder="0.00"
-              readOnly={Boolean(formulario.ordenTrabajoId)}
-            />
+            Moneda
+            <select name="moneda" value={formulario.moneda} onChange={cambiarFormulario}>
+              {MONEDAS.map((moneda) => (
+                <option key={moneda} value={moneda}>{moneda}</option>
+              ))}
+            </select>
           </label>
 
           <label>
-            Material principal
-            <input
-              name="material"
-              value={formulario.material}
-              onChange={cambiarFormulario}
-              placeholder="Ej: PVC, acrílico, vinil, lona..."
-            />
+            Venta total
+            <input name="total" type="number" step="0.01" value={formulario.total} onChange={cambiarFormulario} />
+          </label>
+
+          <label>
+            Costo materiales
+            <input name="costoMateriales" type="number" step="0.01" value={formulario.costoMateriales} onChange={cambiarFormulario} />
+          </label>
+
+          <label>
+            Mano de obra
+            <input name="costoManoObra" type="number" step="0.01" value={formulario.costoManoObra} onChange={cambiarFormulario} />
+          </label>
+
+          <label>
+            Transporte
+            <input name="costoTransporte" type="number" step="0.01" value={formulario.costoTransporte} onChange={cambiarFormulario} />
+          </label>
+
+          <label>
+            Instalación
+            <input name="costoInstalacion" type="number" step="0.01" value={formulario.costoInstalacion} onChange={cambiarFormulario} />
+          </label>
+
+          <label>
+            Otros costos
+            <input name="otrosCostos" type="number" step="0.01" value={formulario.otrosCostos} onChange={cambiarFormulario} />
           </label>
 
           <label>
             Responsable
-            <input
-              name="responsable"
-              value={formulario.responsable}
-              onChange={cambiarFormulario}
-              placeholder="Ej: Erick Cano"
-            />
-          </label>
-
-          <label>
-            Fecha de inicio
-            <input
-              name="fechaInicio"
-              type="date"
-              value={formulario.fechaInicio}
-              onChange={cambiarFormulario}
-            />
-          </label>
-
-          <label>
-            Fecha de entrega
-            <input
-              name="fechaEntrega"
-              type="date"
-              value={formulario.fechaEntrega}
-              onChange={cambiarFormulario}
-            />
+            <input name="responsable" value={formulario.responsable} onChange={cambiarFormulario} />
           </label>
 
           <label>
             Etapa
-            <select
-              name="etapa"
-              value={formulario.etapa}
-              onChange={cambiarFormulario}
-            >
-              <option>Pendiente</option>
-              <option>Fabricando</option>
-              <option>Instalación</option>
-              <option>Completado</option>
-              <option>Cancelado</option>
+            <select name="etapa" value={formulario.etapa} onChange={cambiarFormulario}>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Diseño">Diseño</option>
+              <option value="Producción">Producción</option>
+              <option value="Fabricación">Fabricación</option>
+              <option value="Instalación">Instalación</option>
+              <option value="Terminada">Terminada</option>
+              <option value="Entregada">Entregada</option>
+              <option value="Cancelada">Cancelada</option>
             </select>
           </label>
 
           <label>
             Prioridad
-            <select
-              name="prioridad"
-              value={formulario.prioridad}
-              onChange={cambiarFormulario}
-            >
-              <option>Baja</option>
-              <option>Media</option>
-              <option>Alta</option>
-              <option>Urgente</option>
+            <select name="prioridad" value={formulario.prioridad} onChange={cambiarFormulario}>
+              <option value="Baja">Baja</option>
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Urgente">Urgente</option>
             </select>
           </label>
 
           <label>
             Avance %
-            <input
-              name="avance"
-              type="number"
-              min="0"
-              max="100"
-              value={formulario.avance}
-              onChange={cambiarFormulario}
-              placeholder="Ej: 50"
-            />
+            <input name="avance" type="number" step="1" min="0" max="100" value={formulario.avance} onChange={cambiarFormulario} />
           </label>
 
           <label>
-            Materiales requeridos
-            <textarea
-              name="materiales"
-              rows="3"
-              value={formulario.materiales}
-              onChange={cambiarFormulario}
-              placeholder="Materiales requeridos para producción..."
-            />
+            Fecha inicio
+            <input name="fechaInicio" type="date" value={formulario.fechaInicio} onChange={cambiarFormulario} />
           </label>
 
           <label>
-            Medidas / Especificaciones
-            <textarea
-              name="medidas"
-              rows="3"
-              value={formulario.medidas}
-              onChange={cambiarFormulario}
-              placeholder="Medidas, acabados, cantidades o detalles físicos..."
-            />
+            Fecha entrega
+            <input name="fechaEntrega" type="date" value={formulario.fechaEntrega} onChange={cambiarFormulario} />
           </label>
 
-          <label>
-            Nota técnica
-            <textarea
-              name="nota"
-              rows="4"
-              value={formulario.nota}
-              onChange={cambiarFormulario}
-              placeholder="Detalles de producción, pendientes, instalación o control interno..."
-            />
+          <label className="crm-field-full">
+            Materiales usados
+            <textarea name="materiales" value={formulario.materiales} onChange={cambiarFormulario} />
           </label>
 
-          <div className="crm-actions">
-            <button type="submit">
-              {editandoId ? 'Guardar cambios' : 'Agregar orden'}
-            </button>
+          <label className="crm-field-full">
+            Medidas
+            <textarea name="medidas" value={formulario.medidas} onChange={cambiarFormulario} />
+          </label>
 
+          <label className="crm-field-full">
+            Nota de producción
+            <textarea name="nota" value={formulario.nota} onChange={cambiarFormulario} />
+          </label>
+
+          <div className="crm-field-full crm-cost-box">
+            <strong>Resultado real del trabajo</strong>
+            <span>Venta: {dinero(calcularCostos(formulario).venta, formulario.moneda)}</span>
+            <span>Costo: {dinero(calcularCostos(formulario).costoTotal, formulario.moneda)}</span>
+            <span>Utilidad: {dinero(calcularCostos(formulario).utilidad, formulario.moneda)}</span>
+            <span>Margen: {porcentaje(calcularCostos(formulario).margen)}</span>
+          </div>
+
+          <div className="crm-actions crm-field-full">
+            <button type="submit">{editandoId ? 'Actualizar producción' : 'Crear producción'}</button>
             {editandoId && (
-              <button type="button" onClick={limpiarFormulario}>
+              <button type="button" onClick={limpiar} className="btn-secondary">
                 Cancelar edición
               </button>
             )}
           </div>
         </form>
+      </div>
 
-        <div className="crm-card">
-          <div className="crm-toolbar">
-            <input
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por cliente, OT, pedido, producto, etapa..."
-            />
+      <div className="crm-card">
+        <div className="crm-page-header">
+          <div>
+            <h3>Listado de producción</h3>
+            <p>Control real de fabricación y rentabilidad.</p>
           </div>
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar producción..."
+          />
+        </div>
 
-          <div className="crm-table-wrapper">
-            <table className="crm-table">
-              <thead>
-                <tr>
-                  <th>Producción</th>
-                  <th>OT</th>
-                  <th>Empresa</th>
-                  <th>Contacto</th>
-                  <th>Pedido</th>
-                  <th>Producto</th>
-                  <th>Material</th>
-                  <th>Responsable</th>
-                  <th>Entrega</th>
-                  <th>Etapa</th>
-                  <th>Unidad</th>
-                  <th>Avance</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
+        <div className="crm-table-wrap">
+          <table className="crm-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>OT</th>
+                <th>Cliente</th>
+                <th>Trabajo</th>
+                <th>Unidad</th>
+                <th>Venta</th>
+                <th>Costo</th>
+                <th>Utilidad</th>
+                <th>Margen</th>
+                <th>Etapa</th>
+                <th>Avance</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {produccionFiltrada.map((item) => {
+                const calculo = calcularCostos(item);
 
-              <tbody>
-                {ordenesFiltradas.length > 0 ? (
-                  ordenesFiltradas.map((orden) => (
-                    <tr key={orden.id}>
-                      <td>{orden.codigo || 'Sin código'}</td>
-                      <td>{orden.ordenTrabajoCodigo || 'Sin OT'}</td>
-                      <td>
-                        {orden.empresaNombre || orden.empresa || orden.cliente || 'Sin empresa'}
-                      </td>
-                      <td>{orden.contactoNombre || orden.contacto || 'Sin contacto'}</td>
-                      <td>{orden.pedidoCodigo || orden.pedido || 'Sin pedido'}</td>
-                      <td>{orden.producto || 'Sin producto'}</td>
-                      <td>{orden.material || orden.materiales || 'Sin material'}</td>
-                      <td>{orden.responsable || 'Sin asignar'}</td>
-                      <td>{orden.fechaEntrega || 'Sin fecha'}</td>
-                      <td>{orden.etapa || 'Pendiente'}</td>
-                      <td>{orden.unidadNegocio || 'ELANKAV VISUAL'}</td>
-                      <td>{orden.avance || 0}%</td>
-                      <td>
-                        <div className="crm-row-actions">
-                          <button type="button" onClick={() => editarOrden(orden)}>
-                            Editar
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => eliminarOrden(orden.id)}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="13">
-                      No hay órdenes de producción registradas.
+                return (
+                  <tr key={item.id}>
+                    <td>{item.codigo}</td>
+                    <td>{item.ordenTrabajoCodigo || 'Sin OT'}</td>
+                    <td>{item.cliente || item.empresaNombre || 'Sin cliente'}</td>
+                    <td>{item.producto || 'Sin producto'}</td>
+                    <td>{item.unidadNegocio || 'ELANKAV VISUAL'}</td>
+                    <td>{dinero(calculo.venta, item.moneda)}</td>
+                    <td>{dinero(calculo.costoTotal, item.moneda)}</td>
+                    <td>{dinero(calculo.utilidad, item.moneda)}</td>
+                    <td>{porcentaje(calculo.margen)}</td>
+                    <td>{item.etapa || 'Pendiente'}</td>
+                    <td>{numero(item.avance)}%</td>
+                    <td>
+                      <button type="button" onClick={() => editarOrden(item)}>Editar</button>
+                      <button type="button" className="btn-danger" onClick={() => eliminarOrden(item.id)}>
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
 
-          <div className="crm-note">
-            Producción ya está conectada con órdenes de trabajo, pedidos,
-            cotizaciones, empresas y contactos mediante IDs reales.
-          </div>
+              {produccionFiltrada.length === 0 && (
+                <tr>
+                  <td colSpan="12">No hay producción registrada.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="crm-note">
+          Producción queda conectada con órdenes de trabajo y ahora controla costo real, utilidad real y margen.
         </div>
       </div>
+
+      <style>{`
+        .crm-cost-box {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 8px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          padding: 14px;
+        }
+      `}</style>
     </div>
   );
 }

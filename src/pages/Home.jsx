@@ -6,13 +6,45 @@ import { useApp } from '../context/AppContext';
 export default function Home({ setPage }) {
   const { banners } = useApp();
 
+  const bannersActivos = Array.isArray(banners)
+    ? banners.filter((banner) => banner?.activo)
+    : [];
+
+  const normalizar = (valor = '') =>
+    String(valor)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+  const esHeroPrincipal = (banner) => {
+    const ubicacion = normalizar(banner?.ubicacion);
+    return (
+      ubicacion === 'hero-principal' ||
+      ubicacion === 'banner principal de portada' ||
+      ubicacion === 'principal' ||
+      ubicacion === 'portada'
+    );
+  };
+
+  const esSliderHome = (banner) => {
+    const ubicacion = normalizar(banner?.ubicacion);
+    return ubicacion === 'slider-home' || ubicacion === 'slider principal';
+  };
+
+  const esHome = (banner) => {
+    const ubicacion = normalizar(banner?.ubicacion);
+    return ubicacion === 'home' || ubicacion === 'inicio';
+  };
+
   const heroBanner =
-    banners?.find((banner) => banner.activo && banner.ubicacion === 'hero-principal') ||
-    banners?.find((banner) => banner.activo && banner.ubicacion === 'slider-home') ||
-    banners?.find((banner) => banner.activo && banner.ubicacion === 'home') ||
+    bannersActivos.find(esHeroPrincipal) ||
+    bannersActivos.find(esSliderHome) ||
+    bannersActivos.find(esHome) ||
     {};
 
   const heroTitulo = heroBanner.titulo || 'Tu mascota merece más';
+
   const heroDescripcion =
     heroBanner.descripcion ||
     heroBanner.subtitulo ||
@@ -27,7 +59,7 @@ export default function Home({ setPage }) {
           <span className="elanpet-pill">🐾 TODO PARA TU MASCOTA</span>
 
           <h1>
-            {heroTitulo.includes('merece más') ? (
+            {heroTitulo.toLowerCase().includes('merece') ? (
               <>
                 Tu mascota
                 <br />
@@ -45,22 +77,38 @@ export default function Home({ setPage }) {
           <div className="elanpet-benefits">
             <div>
               <BadgeCheck size={32} />
-              <b>Productos<br />de calidad</b>
+              <b>
+                Productos
+                <br />
+                de calidad
+              </b>
             </div>
 
             <div>
               <PackageCheck size={32} />
-              <b>Fabricados<br />con amor</b>
+              <b>
+                Fabricados
+                <br />
+                con amor
+              </b>
             </div>
 
             <div>
               <HeartHandshake size={32} />
-              <b>Diseñados para<br />su bienestar</b>
+              <b>
+                Diseñados para
+                <br />
+                su bienestar
+              </b>
             </div>
 
             <div>
               <Truck size={34} />
-              <b>Entrega rápida<br />y segura</b>
+              <b>
+                Entrega rápida
+                <br />
+                y segura
+              </b>
             </div>
           </div>
 
@@ -78,14 +126,19 @@ export default function Home({ setPage }) {
         </div>
 
         <div className="elanpet-launch-media">
-          <img src={heroImagen} alt={heroBanner.titulo || 'ELANPET productos para perros y gatos'} />
+          <img
+            src={heroImagen}
+            alt={heroBanner.titulo || 'ELANPET productos para perros y gatos'}
+          />
         </div>
       </section>
 
       <section className="elanpet-category-section">
         <div className="elanpet-section-title">
           <span>CATÁLOGO</span>
-          <h2>Productos <strong>principales</strong></h2>
+          <h2>
+            Productos <strong>principales</strong>
+          </h2>
         </div>
 
         <div className="elanpet-category-grid">
@@ -111,7 +164,9 @@ export default function Home({ setPage }) {
               <span style={{ display: cat.imagen ? 'none' : 'block' }}>{cat.icono}</span>
 
               <b>{cat.nombre}</b>
-              <i><ArrowRight size={20} /></i>
+              <i>
+                <ArrowRight size={20} />
+              </i>
             </button>
           ))}
         </div>

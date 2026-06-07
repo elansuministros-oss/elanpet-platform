@@ -1,8 +1,24 @@
 import React from 'react';
 import { ArrowRight, BadgeCheck, HeartHandshake, PackageCheck, Truck } from 'lucide-react';
 import { categoriasHome } from '../data/productos';
+import { useApp } from '../context/AppContext';
 
 export default function Home({ setPage }) {
+  const { banners } = useApp();
+
+  const heroBanner =
+    banners?.find((banner) => banner.activo && banner.ubicacion === 'slider-home') ||
+    banners?.find((banner) => banner.activo && banner.ubicacion === 'home') ||
+    {};
+
+  const heroTitulo = heroBanner.titulo || 'Tu mascota merece más';
+  const heroDescripcion =
+    heroBanner.descripcion ||
+    heroBanner.subtitulo ||
+    'Muebles funcionales, resistentes y fabricados para el bienestar de perros y gatos.';
+
+  const heroImagen = heroBanner.imagen || '/productos/producto-04.jpg';
+
   return (
     <main className="home-page home-launch-page">
       <section className="elanpet-launch-hero">
@@ -10,15 +26,18 @@ export default function Home({ setPage }) {
           <span className="elanpet-pill">🐾 TODO PARA TU MASCOTA</span>
 
           <h1>
-            Tu mascota
-            <br />
-            merece <span>más</span>
+            {heroTitulo.includes('merece más') ? (
+              <>
+                Tu mascota
+                <br />
+                merece <span>más</span>
+              </>
+            ) : (
+              heroTitulo
+            )}
           </h1>
 
-          <p>
-            Muebles funcionales, resistentes y fabricados para el bienestar
-            de perros y gatos.
-          </p>
+          <p>{heroDescripcion}</p>
 
           <strong className="elanpet-hero-line">Compra fácil desde tu celular.</strong>
 
@@ -27,14 +46,17 @@ export default function Home({ setPage }) {
               <BadgeCheck size={32} />
               <b>Productos<br />de calidad</b>
             </div>
+
             <div>
               <PackageCheck size={32} />
               <b>Fabricados<br />con amor</b>
             </div>
+
             <div>
               <HeartHandshake size={32} />
               <b>Diseñados para<br />su bienestar</b>
             </div>
+
             <div>
               <Truck size={34} />
               <b>Entrega rápida<br />y segura</b>
@@ -55,7 +77,7 @@ export default function Home({ setPage }) {
         </div>
 
         <div className="elanpet-launch-media">
-          <img src="/elanpet-hero-portada.png" alt="ELANPET productos para perros y gatos" />
+          <img src={heroImagen} alt={heroBanner.titulo || 'ELANPET productos para perros y gatos'} />
         </div>
       </section>
 

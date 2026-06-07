@@ -38,6 +38,29 @@ function slugUsuario(texto) {
     .slice(0, 20);
 }
 
+
+const opcionesUbicacionBanner = [
+  { value: 'hero-principal', label: 'Banner principal de portada' },
+  { value: 'slider-home', label: 'Slider principal' },
+  { value: 'home', label: 'Promociones destacadas' },
+  { value: 'catalogo', label: 'Catálogo' },
+];
+
+const opcionesLinkBanner = [
+  { value: 'catalogo', label: 'Catálogo' },
+  { value: 'contacto', label: 'Contacto' },
+  { value: 'home', label: 'Inicio' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+];
+
+function etiquetaUbicacionBanner(valor) {
+  return opcionesUbicacionBanner.find((opcion) => opcion.value === valor)?.label || valor || 'Sin ubicación';
+}
+
+function etiquetaLinkBanner(valor) {
+  return opcionesLinkBanner.find((opcion) => opcion.value === valor)?.label || valor || 'Sin enlace';
+}
+
 export default function AdminPanel() {
   const {
     imagenes,
@@ -76,7 +99,7 @@ export default function AdminPanel() {
   const [tab, setTab] = useState('dashboard');
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', categoria: 'Casas para perros', descripcion: '', medidas: '', precio: '', imagen: '' });
   const [productoEditando, setProductoEditando] = useState(null);
-  const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'slider-home', link: 'catalogo', imagen: '', activo: true });
+  const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'hero-principal', link: 'catalogo', imagen: '', activo: true });
   const [bannerEditando, setBannerEditando] = useState(null);
   const [nuevoTrabajo, setNuevoTrabajo] = useState({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' });
   const [nuevaCuenta, setNuevaCuenta] = useState(cuentaVacia);
@@ -129,7 +152,7 @@ export default function AdminPanel() {
     e.preventDefault();
     if (!nuevoBanner.titulo) return;
     crearBanner(nuevoBanner);
-    setNuevoBanner({ titulo: '', subtitulo: '', ubicacion: 'slider-home', link: 'catalogo', imagen: '', activo: true });
+    setNuevoBanner({ titulo: '', subtitulo: '', ubicacion: 'hero-principal', link: 'catalogo', imagen: '', activo: true });
   };
 
   const agregarTrabajo = (e) => {
@@ -373,8 +396,16 @@ export default function AdminPanel() {
             <input placeholder="Título" value={nuevoBanner.titulo} onChange={(e) => setNuevoBanner({ ...nuevoBanner, titulo: e.target.value })} />
             <input placeholder="Subtítulo" value={nuevoBanner.subtitulo} onChange={(e) => setNuevoBanner({ ...nuevoBanner, subtitulo: e.target.value })} />
             <div className="span-2"><ImageUploader label="Imagen del banner" value={nuevoBanner.imagen} onChange={(img) => setNuevoBanner({ ...nuevoBanner, imagen: img })} /></div>
-            <select value={nuevoBanner.ubicacion} onChange={(e) => setNuevoBanner({ ...nuevoBanner, ubicacion: e.target.value })}><option value="slider-home">Slider principal</option><option value="home">Promociones destacadas</option><option value="catalogo">Catálogo</option></select>
-            <select value={nuevoBanner.link} onChange={(e) => setNuevoBanner({ ...nuevoBanner, link: e.target.value })}><option value="catalogo">Catálogo</option><option value="contacto">Contacto</option><option value="home">Inicio</option></select>
+            <select value={nuevoBanner.ubicacion} onChange={(e) => setNuevoBanner({ ...nuevoBanner, ubicacion: e.target.value })}>
+              {opcionesUbicacionBanner.map((opcion) => (
+                <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
+              ))}
+            </select>
+            <select value={nuevoBanner.link} onChange={(e) => setNuevoBanner({ ...nuevoBanner, link: e.target.value })}>
+              {opcionesLinkBanner.map((opcion) => (
+                <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
+              ))}
+            </select>
             <button><ImagePlus size={18} /> Crear banner</button>
           </form>
 
@@ -382,7 +413,7 @@ export default function AdminPanel() {
             {banners.map((b) => (
               <article key={b.id} className="admin-row admin-row-actions">
                 {b.imagen ? <img src={b.imagen} alt={b.titulo} /> : <div className="admin-thumb-empty">Sin imagen</div>}
-                <div><b>{b.titulo}</b><span>{b.subtitulo}</span><span>{b.ubicacion} · link: {b.link}</span></div>
+                <div><b>{b.titulo}</b><span>{b.subtitulo}</span><span>{etiquetaUbicacionBanner(b.ubicacion)} · link: {etiquetaLinkBanner(b.link)}</span></div>
                 <strong>{b.activo !== false ? 'Activo' : 'Oculto'}</strong>
                 <button type="button" className="btn-outline" onClick={() => setBannerEditando(b)}>Editar</button>
                 <button type="button" className="btn-outline" onClick={() => actualizarBanner({ ...b, activo: b.activo === false })}>{b.activo === false ? 'Activar' : 'Ocultar'}</button>
@@ -394,6 +425,17 @@ export default function AdminPanel() {
                     <input placeholder="Título" value={bannerEditando.titulo || ''} onChange={(e) => setBannerEditando({ ...bannerEditando, titulo: e.target.value })} />
                     <input placeholder="Subtítulo" value={bannerEditando.subtitulo || ''} onChange={(e) => setBannerEditando({ ...bannerEditando, subtitulo: e.target.value })} />
                     <ImageUploader label="Imagen del banner" value={bannerEditando.imagen || ''} onChange={(img) => setBannerEditando({ ...bannerEditando, imagen: img })} />
+                    <select value={bannerEditando.ubicacion || 'hero-principal'} onChange={(e) => setBannerEditando({ ...bannerEditando, ubicacion: e.target.value })}>
+                      {opcionesUbicacionBanner.map((opcion) => (
+                        <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
+                      ))}
+                    </select>
+                    <select value={bannerEditando.link || 'catalogo'} onChange={(e) => setBannerEditando({ ...bannerEditando, link: e.target.value })}>
+                      {opcionesLinkBanner.map((opcion) => (
+                        <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
+                      ))}
+                    </select>
+                    <label className="switch-row"><input type="checkbox" checked={bannerEditando.activo !== false} onChange={(e) => setBannerEditando({ ...bannerEditando, activo: e.target.checked })} /> Banner activo</label>
                     <div className="edit-actions"><button type="button" onClick={() => { actualizarBanner(bannerEditando); setBannerEditando(null); }}>Guardar cambios</button><button type="button" className="btn-outline" onClick={() => setBannerEditando(null)}>Cancelar</button></div>
                   </div>
                 )}

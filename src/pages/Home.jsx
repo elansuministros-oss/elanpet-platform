@@ -1,112 +1,84 @@
 import React from 'react';
 import { ArrowRight, BadgeCheck, HeartHandshake, PackageCheck, Truck } from 'lucide-react';
-import { useApp } from '../context/AppContext';
 import { categoriasHome } from '../data/productos';
 
 export default function Home({ setPage }) {
-  const { configuracion, trabajos } = useApp();
-
-  const nombreSitio = configuracion.nombreSitio || 'PET.ELANKAV.COM';
-
   return (
-    <main className="home-page">
+    <main className="home-page home-launch-page">
+      <section className="elanpet-launch-hero">
+        <div className="elanpet-launch-copy">
+          <span className="elanpet-pill">🐾 TODO PARA TU MASCOTA</span>
 
-      <section className="elanpet-hero">
-        <div className="elanpet-hero-copy">
-          <span className="badge">🐾 TODO PARA TU MASCOTA</span>
-
-          <h1>Tu mascota merece más</h1>
+          <h1>
+            Tu mascota
+            <br />
+            merece <span>más</span>
+          </h1>
 
           <p>
             Muebles funcionales, resistentes y fabricados para el bienestar
             de perros y gatos.
-            <br /><br />
-            <strong>Compra fácil desde tu celular.</strong>
           </p>
 
-          <div className="trust-row elanpet-trust-row">
-            <span><BadgeCheck size={18}/> Productos de calidad</span>
-            <span><HeartHandshake size={18}/> Fabricados con amor</span>
-            <span><PackageCheck size={18}/> Diseñados para su bienestar</span>
-            <span><Truck size={18}/> Entrega rápida y segura</span>
+          <strong className="elanpet-hero-line">Compra fácil desde tu celular.</strong>
+
+          <div className="elanpet-benefits">
+            <div>
+              <BadgeCheck size={32} />
+              <b>Productos<br />de calidad</b>
+            </div>
+            <div>
+              <PackageCheck size={32} />
+              <b>Fabricados<br />con amor</b>
+            </div>
+            <div>
+              <HeartHandshake size={32} />
+              <b>Diseñados para<br />su bienestar</b>
+            </div>
+            <div>
+              <Truck size={34} />
+              <b>Entrega rápida<br />y segura</b>
+            </div>
           </div>
 
-          <div className="hero-actions">
-            <button onClick={() => setPage('catalogo')}>
-              Ver catálogo <ArrowRight size={18} />
+          <div className="elanpet-hero-actions">
+            <button onClick={() => setPage('catalogo')} className="elanpet-primary-btn">
+              <span>🛍️</span>
+              Ver catálogo
             </button>
 
-            <button
-              className="btn-outline"
-              onClick={() => setPage('contacto')}
-            >
+            <button onClick={() => setPage('contacto')} className="elanpet-whatsapp-btn">
+              <span>☘</span>
               Pedir por WhatsApp
             </button>
           </div>
         </div>
 
-        <div className="elanpet-hero-media">
-          <img
-            src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=1600&auto=format&fit=crop"
-            alt="ELANPET"
-          />
-
-          <div className="elanpet-hero-card">
-            <b>{nombreSitio}</b>
-            <span>
-              Todo para tu mascota en un solo lugar.
-            </span>
-          </div>
+        <div className="elanpet-launch-media">
+          <img src="/elanpet-hero-portada.png" alt="ELANPET productos para perros y gatos" />
         </div>
       </section>
 
-      <section className="section-block">
-        <div className="section-title">
+      <section className="elanpet-category-section">
+        <div className="elanpet-section-title">
           <span>CATÁLOGO</span>
-          <h2>Productos principales</h2>
+          <h2>Productos <strong>principales</strong></h2>
         </div>
 
-        <div className="category-grid">
+        <div className="elanpet-category-grid">
           {categoriasHome.map((cat) => (
             <button
               key={cat.nombre}
-              className="category-card"
+              className="elanpet-category-card"
               onClick={() => setPage('catalogo')}
             >
               <span>{cat.icono}</span>
               <b>{cat.nombre}</b>
+              <i><ArrowRight size={20} /></i>
             </button>
           ))}
         </div>
       </section>
-
-      <section className="section-block">
-        <div className="section-title">
-          <span>PRUEBA REAL</span>
-          <h2>Trabajos entregados</h2>
-        </div>
-
-        <div className="work-grid">
-          {trabajos.slice(0, 6).map((trabajo) => (
-            <article key={trabajo.id} className="work-card">
-              <img src={trabajo.imagen} alt={trabajo.nombre} />
-              <div>
-                <small>Foto</small>
-                <b>{trabajo.nombre}</b>
-                <p>{trabajo.descripcion}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <button
-          className="btn-more"
-          onClick={() => setPage('trabajos')}
-        >
-          Ver más trabajos
-        </button>
-      </section>
-
     </main>
   );
 }

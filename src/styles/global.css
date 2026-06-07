@@ -1262,3 +1262,178 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================
+   ELANPET HOME HERO LANZAMIENTO V9
+   Banner grande sin mini productos laterales
+========================================= */
+.elanpet-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
+  gap: 28px;
+  align-items: stretch;
+  min-height: 620px;
+  margin: 0 0 30px;
+  padding: 34px;
+  border-radius: 42px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 12%, rgba(255, 200, 61, 0.32) 0 15%, transparent 16%),
+    radial-gradient(circle at 10% 90%, rgba(5, 139, 140, 0.16) 0 18%, transparent 19%),
+    linear-gradient(135deg, #ffffff 0%, #e9fbfa 52%, #fff7df 100%);
+  box-shadow: 0 22px 60px rgba(6, 43, 85, 0.13);
+}
+
+.elanpet-hero::after {
+  content: '🐾';
+  position: absolute;
+  right: 34px;
+  bottom: 22px;
+  font-size: 120px;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.elanpet-hero-copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 26px 18px 26px 22px;
+}
+
+.elanpet-hero-copy h1 {
+  max-width: 760px;
+  margin: 20px 0 18px;
+  color: var(--azul-oscuro);
+  font-size: clamp(48px, 6vw, 86px);
+  line-height: 0.92;
+  letter-spacing: -4px;
+}
+
+.elanpet-hero-copy p {
+  max-width: 680px;
+  margin: 0;
+  color: #35465a;
+  font-size: 21px;
+  line-height: 1.62;
+}
+
+.elanpet-trust-row {
+  margin-top: 30px;
+}
+
+.elanpet-hero-media {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 520px;
+}
+
+.elanpet-hero-media img {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  object-fit: cover;
+  border: 10px solid rgba(255, 255, 255, 0.88);
+  border-radius: 34px;
+  background: #ffffff;
+  box-shadow: 0 24px 56px rgba(6, 43, 85, 0.22);
+}
+
+.elanpet-hero-card {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  max-width: 310px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 22px;
+  color: #ffffff;
+  background: rgba(6, 43, 85, 0.82);
+  box-shadow: 0 18px 40px rgba(6, 43, 85, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.elanpet-hero-card b {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 20px;
+}
+
+.elanpet-hero-card span {
+  display: block;
+  color: #e7f5f5;
+  line-height: 1.38;
+}
+
+@media (max-width: 980px) {
+  .elanpet-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 26px;
+  }
+
+  .elanpet-hero-copy {
+    padding: 10px 4px 0;
+  }
+
+  .elanpet-hero-copy h1 {
+    letter-spacing: -2px;
+  }
+
+  .elanpet-hero-media,
+  .elanpet-hero-media img {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 700px) {
+  .home-page {
+    padding-top: 18px;
+  }
+
+  .elanpet-hero {
+    padding: 20px;
+    border-radius: 28px;
+    gap: 20px;
+  }
+
+  .elanpet-hero-copy h1 {
+    font-size: 42px;
+    line-height: 0.98;
+    letter-spacing: -1.6px;
+  }
+
+  .elanpet-hero-copy p {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .elanpet-hero-media,
+  .elanpet-hero-media img {
+    min-height: 260px;
+  }
+
+  .elanpet-hero-media img {
+    border-width: 6px;
+    border-radius: 24px;
+  }
+
+  .elanpet-hero-card {
+    position: static;
+    max-width: 100%;
+    margin-top: -12px;
+    color: var(--azul-oscuro);
+    background: #ffffff;
+    border-color: var(--borde);
+  }
+
+  .elanpet-hero-card span {
+    color: var(--muted);
+  }
+}

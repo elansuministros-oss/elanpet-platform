@@ -3,6 +3,7 @@ import { useCore } from '../../core/context/CoreContext';
 
 import DashboardCRM from '../DashboardCRM';
 import NotificacionesCRM from '../NotificacionesCRM';
+import CentroWhatsApp from '../CentroWhatsApp';
 import DashboardGerencial from '../DashboardGerencial';
 import AutomatizacionesCRM from '../AutomatizacionesCRM';
 import CRMComercialAvanzado from '../CRMComercialAvanzado';
@@ -55,6 +56,7 @@ export default function CRM() {
           { id: 'dashboard', label: 'Dashboard', icono: '📊', componente: <DashboardCRM /> },
           { id: 'dashboard-gerencial', label: 'Dashboard Gerencial', icono: '🧭', componente: <DashboardGerencial /> },
           { id: 'notificaciones', label: 'Notificaciones', icono: '🔔', componente: <NotificacionesCRM /> },
+          { id: 'centro-whatsapp', label: 'Centro WhatsApp', icono: '💬', componente: <CentroWhatsApp /> },
         ],
       },
       {

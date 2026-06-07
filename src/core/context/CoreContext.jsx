@@ -21,6 +21,7 @@ const MODULOS_CRM_PERMISOS = [
   { id: 'dashboard', label: 'Dashboard', grupo: 'General' },
   { id: 'dashboard-gerencial', label: 'Dashboard Gerencial Corporativo', grupo: 'General' },
   { id: 'notificaciones', label: 'Notificaciones Internas', grupo: 'General' },
+  { id: 'centro-whatsapp', label: 'Centro WhatsApp y Leads', grupo: 'General' },
   { id: 'empresas', label: 'Empresas', grupo: 'CRM' },
   { id: 'contactos', label: 'Contactos', grupo: 'CRM' },
   { id: 'clientes', label: 'Clientes', grupo: 'CRM' },
@@ -86,6 +87,7 @@ const rolesCRMIniciales = [
       'dashboard',
       'dashboard-gerencial',
       'notificaciones',
+      'centro-whatsapp',
       'automatizaciones',
       'calendario',
       'documentos',
@@ -117,7 +119,7 @@ const rolesCRMIniciales = [
     id: 'rol-ventas',
     nombre: 'Ventas',
     descripcion: 'Gestión comercial: empresas, contactos, cotizaciones, pedidos y cobros básicos.',
-    permisos: ['dashboard', 'notificaciones', 'empresas', 'contactos', 'clientes', 'cotizaciones', 'pedidos', 'cobros'],
+    permisos: ['dashboard', 'notificaciones', 'centro-whatsapp', 'empresas', 'contactos', 'clientes', 'cotizaciones', 'pedidos', 'cobros'],
     nivel: 'Operativo',
     estado: 'Activo',
   },
@@ -284,6 +286,10 @@ export function CoreProvider({ children }) {
     leerStorage('elankav_notificaciones_crm', [])
   );
 
+  const [leadsWhatsApp, setLeadsWhatsApp] = useState(() =>
+    leerStorage('elankav_leads_whatsapp', [])
+  );
+
 
   const [usuariosCRM, setUsuariosCRM] = useState(() =>
     leerStorage('elankav_usuarios_crm', usuariosCRMIniciales)
@@ -318,6 +324,7 @@ export function CoreProvider({ children }) {
   useEffect(() => guardarStorage('elankav_materiales', materiales), [materiales]);
   useEffect(() => guardarStorage('elankav_auditoria_crm', auditoriaCRM), [auditoriaCRM]);
   useEffect(() => guardarStorage('elankav_notificaciones_crm', notificacionesCRM), [notificacionesCRM]);
+  useEffect(() => guardarStorage('elankav_leads_whatsapp', leadsWhatsApp), [leadsWhatsApp]);
 
   useEffect(() => guardarStorage('elankav_usuarios_crm', usuariosCRM), [usuariosCRM]);
   useEffect(() => guardarStorage('elankav_roles_crm', rolesCRM), [rolesCRM]);
@@ -1522,6 +1529,143 @@ export function CoreProvider({ children }) {
     });
   };
 
+
+  const crearLeadWhatsApp = (datos) => {
+    const registro = crearRegistro('lead-whatsapp', {
+      nombre: datos.nombre || '',
+      whatsapp: datos.whatsapp || '',
+      mensaje: datos.mensaje || '',
+      unidadNegocio: datos.unidadNegocio || 'ELANKAV VISUAL',
+      servicioSolicitado: datos.servicioSolicitado || '',
+      origenMensaje: datos.origenMensaje || 'WhatsApp',
+      tipoCliente: datos.tipoCliente || 'Nuevo',
+      estadoLead: datos.estadoLead || 'Nuevo',
+      clasificacion: datos.clasificacion || 'Información',
+      seguimiento: datos.seguimiento || '',
+      responsable: datos.responsable || '',
+      contactoId: datos.contactoId || '',
+      cotizacionId: datos.cotizacionId || '',
+      fechaUltimoSeguimiento: datos.fechaUltimoSeguimiento || new Date().toISOString(),
+    });
+
+    setLeadsWhatsApp((prev) => [registro, ...prev]);
+    registrarAuditoriaCRM({
+      modulo: 'Centro WhatsApp',
+      accion: 'CREAR',
+      detalle: `Lead creado: ${registro.nombre || registro.whatsapp || registro.id}`,
+      entidadId: registro.id,
+      entidadTipo: 'lead_whatsapp',
+      datos: registro,
+    });
+    return registro;
+  };
+
+  const actualizarLeadWhatsApp = (id, datos) => {
+    setLeadsWhatsApp((prev) => actualizarLista(prev, id, {
+      ...datos,
+      fechaUltimoSeguimiento: datos.fechaUltimoSeguimiento || new Date().toISOString(),
+    }));
+    registrarAuditoriaCRM({
+      modulo: 'Centro WhatsApp',
+      accion: 'EDITAR',
+      detalle: `Lead actualizado: ${datos.nombre || datos.whatsapp || id}`,
+      entidadId: id,
+      entidadTipo: 'lead_whatsapp',
+      datos,
+    });
+  };
+
+  const eliminarLeadWhatsApp = (id) => {
+    const registro = leadsWhatsApp.find((item) => item.id === id);
+    setLeadsWhatsApp((prev) => eliminarDeLista(prev, id));
+    registrarAuditoriaCRM({
+      modulo: 'Centro WhatsApp',
+      accion: 'ELIMINAR',
+      detalle: `Lead eliminado: ${registro?.nombre || registro?.whatsapp || id}`,
+      entidadId: id,
+      entidadTipo: 'lead_whatsapp',
+      datos: registro || null,
+    });
+  };
+
+  const convertirLeadWhatsAppAContacto = (id) => {
+    const lead = leadsWhatsApp.find((item) => item.id === id);
+    if (!lead) return null;
+
+    const contacto = crearContacto({
+      nombre: lead.nombre || 'Contacto WhatsApp',
+      cargo: lead.tipoCliente || 'Lead',
+      whatsapp: lead.whatsapp || '',
+      correo: '',
+      empresaId: '',
+      rol: lead.tipoCliente || 'Cliente',
+      estado: 'Activo',
+      unidadNegocio: lead.unidadNegocio || 'ELANKAV VISUAL',
+      origen: lead.origenMensaje || 'WhatsApp',
+      notas: `Lead generado desde Centro WhatsApp. Servicio: ${lead.servicioSolicitado || 'No definido'}. Clasificación: ${lead.clasificacion || 'No definida'}. Mensaje: ${lead.mensaje || ''}`,
+    });
+
+    actualizarLeadWhatsApp(id, {
+      contactoId: contacto.id,
+      estadoLead: lead.estadoLead === 'Nuevo' ? 'Respondido' : lead.estadoLead,
+      nombre: lead.nombre,
+      whatsapp: lead.whatsapp,
+      mensaje: lead.mensaje,
+      unidadNegocio: lead.unidadNegocio,
+      servicioSolicitado: lead.servicioSolicitado,
+      origenMensaje: lead.origenMensaje,
+      tipoCliente: lead.tipoCliente,
+      clasificacion: lead.clasificacion,
+      seguimiento: lead.seguimiento,
+      responsable: lead.responsable,
+      cotizacionId: lead.cotizacionId || '',
+    });
+
+    return contacto;
+  };
+
+  const crearCotizacionDesdeLeadWhatsApp = (id) => {
+    const lead = leadsWhatsApp.find((item) => item.id === id);
+    if (!lead) return null;
+
+    const cotizacion = crearCotizacion({
+      codigo: `COT-WA-${Date.now()}`,
+      cliente: lead.nombre || lead.whatsapp || 'Cliente WhatsApp',
+      empresa: '',
+      contacto: lead.nombre || '',
+      descripcion: lead.servicioSolicitado || lead.mensaje || 'Solicitud recibida por WhatsApp',
+      categoria: lead.clasificacion || 'Cotización',
+      unidadNegocio: lead.unidadNegocio || 'ELANKAV VISUAL',
+      moneda: 'C$',
+      subtotal: 0,
+      iva: 15,
+      descuento: 0,
+      total: 0,
+      estado: 'Borrador',
+      fecha: new Date().toISOString().slice(0, 10),
+      vencimiento: '',
+      observaciones: `Origen: ${lead.origenMensaje || 'WhatsApp'}. WhatsApp: ${lead.whatsapp || ''}. Tipo cliente: ${lead.tipoCliente || ''}. Mensaje: ${lead.mensaje || ''}`,
+    });
+
+    actualizarLeadWhatsApp(id, {
+      cotizacionId: cotizacion.id,
+      estadoLead: 'Cotizado',
+      nombre: lead.nombre,
+      whatsapp: lead.whatsapp,
+      mensaje: lead.mensaje,
+      unidadNegocio: lead.unidadNegocio,
+      servicioSolicitado: lead.servicioSolicitado,
+      origenMensaje: lead.origenMensaje,
+      tipoCliente: lead.tipoCliente,
+      clasificacion: lead.clasificacion,
+      seguimiento: lead.seguimiento,
+      responsable: lead.responsable,
+      contactoId: lead.contactoId || '',
+    });
+
+    return cotizacion;
+  };
+
   const usuarioActivoCRM =
     usuariosCRM.find((usuario) => usuario.id === usuarioActivoCRMId) || usuariosCRMIniciales[0];
 
@@ -1559,6 +1703,7 @@ export function CoreProvider({ children }) {
       materiales,
       auditoriaCRM,
       notificacionesCRM,
+      leadsWhatsApp,
       notificacionesInternasCRM,
       resumenNotificacionesCRM,
       usuariosCRM,
@@ -1657,6 +1802,11 @@ export function CoreProvider({ children }) {
       marcarNotificacionCRMLeida,
       archivarNotificacionCRM,
       marcarTodasNotificacionesCRMLeidas,
+      crearLeadWhatsApp,
+      actualizarLeadWhatsApp,
+      eliminarLeadWhatsApp,
+      convertirLeadWhatsAppAContacto,
+      crearCotizacionDesdeLeadWhatsApp,
       usuarioTienePermisoCRM,
     }),
     [
@@ -1681,6 +1831,7 @@ export function CoreProvider({ children }) {
       materiales,
       auditoriaCRM,
       notificacionesCRM,
+      leadsWhatsApp,
       notificacionesInternasCRM,
       resumenNotificacionesCRM,
       usuariosCRM,

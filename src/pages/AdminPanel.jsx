@@ -61,6 +61,29 @@ function etiquetaLinkBanner(valor) {
   return opcionesLinkBanner.find((opcion) => opcion.value === valor)?.label || valor || 'Sin enlace';
 }
 
+
+function limpiarRutaPublica(valor) {
+  const texto = String(valor || '').trim();
+  if (!texto || texto.startsWith('data:image/')) return '';
+  if (texto.startsWith('http://') || texto.startsWith('https://')) return texto;
+  return texto.startsWith('/') ? texto : `/${texto}`;
+}
+
+function prepararBannerParaGuardar(banner) {
+  const imagenRuta = limpiarRutaPublica(banner.imagenRuta || banner.imagen);
+
+  return {
+    ...banner,
+    imagenRuta,
+    imagen: imagenRuta,
+    activo: banner.activo !== false,
+  };
+}
+
+function obtenerImagenBanner(banner) {
+  return limpiarRutaPublica(banner?.imagenRuta || banner?.imagen);
+}
+
 export default function AdminPanel() {
   const {
     imagenes,
@@ -99,7 +122,8 @@ export default function AdminPanel() {
   const [tab, setTab] = useState('dashboard');
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', categoria: 'Casas para perros', descripcion: '', medidas: '', precio: '', imagen: '' });
   const [productoEditando, setProductoEditando] = useState(null);
-  const [nuevoBanner, setNuevoBanner] = useState({ titulo: '', subtitulo: '', ubicacion: 'hero-principal', link: 'catalogo', imagen: '', activo: true });
+  const bannerVacio = { titulo: '', subtitulo: '', ubicacion: 'hero-principal', link: 'catalogo', imagen: '', imagenRuta: '/productos/portada2-01.png', activo: true };
+  const [nuevoBanner, setNuevoBanner] = useState(bannerVacio);
   const [bannerEditando, setBannerEditando] = useState(null);
   const [nuevoTrabajo, setNuevoTrabajo] = useState({ titulo: '', tipo: 'Foto', descripcion: '', imagen: '/productos/producto-01.jpg' });
   const [nuevaCuenta, setNuevaCuenta] = useState(cuentaVacia);
@@ -151,8 +175,12 @@ export default function AdminPanel() {
   const agregarBanner = (e) => {
     e.preventDefault();
     if (!nuevoBanner.titulo) return;
-    crearBanner(nuevoBanner);
-    setNuevoBanner({ titulo: '', subtitulo: '', ubicacion: 'hero-principal', link: 'catalogo', imagen: '', activo: true });
+
+    const bannerPreparado = prepararBannerParaGuardar(nuevoBanner);
+    if (!bannerPreparado.imagenRuta) return alert('Escribí una ruta pública de imagen. Ejemplo: /productos/portada2-01.png');
+
+    crearBanner(bannerPreparado);
+    setNuevoBanner(bannerVacio);
   };
 
   const agregarTrabajo = (e) => {
@@ -395,7 +423,13 @@ export default function AdminPanel() {
           <form className="form-grid" onSubmit={agregarBanner}>
             <input placeholder="Título" value={nuevoBanner.titulo} onChange={(e) => setNuevoBanner({ ...nuevoBanner, titulo: e.target.value })} />
             <input placeholder="Subtítulo" value={nuevoBanner.subtitulo} onChange={(e) => setNuevoBanner({ ...nuevoBanner, subtitulo: e.target.value })} />
-            <div className="span-2"><ImageUploader label="Imagen del banner" value={nuevoBanner.imagen} onChange={(img) => setNuevoBanner({ ...nuevoBanner, imagen: img })} /></div>
+            <input
+              className="span-2"
+              placeholder="Ruta pública de imagen. Ej: /productos/portada2-01.png"
+              value={nuevoBanner.imagenRuta || ''}
+              onChange={(e) => setNuevoBanner({ ...nuevoBanner, imagenRuta: e.target.value, imagen: e.target.value })}
+            />
+            <p className="note span-2">Para banners usá imágenes guardadas en public/productos, public/banners o public/categorias. No se guardan imágenes pesadas en el navegador.</p>
             <select value={nuevoBanner.ubicacion} onChange={(e) => setNuevoBanner({ ...nuevoBanner, ubicacion: e.target.value })}>
               {opcionesUbicacionBanner.map((opcion) => (
                 <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
@@ -412,8 +446,8 @@ export default function AdminPanel() {
           <div className="admin-list">
             {banners.map((b) => (
               <article key={b.id} className="admin-row admin-row-actions">
-                {b.imagen ? <img src={b.imagen} alt={b.titulo} /> : <div className="admin-thumb-empty">Sin imagen</div>}
-                <div><b>{b.titulo}</b><span>{b.subtitulo}</span><span>{etiquetaUbicacionBanner(b.ubicacion)} · link: {etiquetaLinkBanner(b.link)}</span></div>
+                {obtenerImagenBanner(b) ? <img src={obtenerImagenBanner(b)} alt={b.titulo} /> : <div className="admin-thumb-empty">Sin imagen</div>}
+                <div><b>{b.titulo}</b><span>{b.subtitulo}</span><span>{etiquetaUbicacionBanner(b.ubicacion)} · link: {etiquetaLinkBanner(b.link)}</span><span>Imagen: {obtenerImagenBanner(b) || 'Sin ruta'}</span></div>
                 <strong>{b.activo !== false ? 'Activo' : 'Oculto'}</strong>
                 <button type="button" className="btn-outline" onClick={() => setBannerEditando(b)}>Editar</button>
                 <button type="button" className="btn-outline" onClick={() => actualizarBanner({ ...b, activo: b.activo === false })}>{b.activo === false ? 'Activar' : 'Ocultar'}</button>
@@ -424,7 +458,12 @@ export default function AdminPanel() {
                     <h3>Editar banner</h3>
                     <input placeholder="Título" value={bannerEditando.titulo || ''} onChange={(e) => setBannerEditando({ ...bannerEditando, titulo: e.target.value })} />
                     <input placeholder="Subtítulo" value={bannerEditando.subtitulo || ''} onChange={(e) => setBannerEditando({ ...bannerEditando, subtitulo: e.target.value })} />
-                    <ImageUploader label="Imagen del banner" value={bannerEditando.imagen || ''} onChange={(img) => setBannerEditando({ ...bannerEditando, imagen: img })} />
+                    <input
+                      placeholder="Ruta pública de imagen. Ej: /productos/portada2-01.png"
+                      value={bannerEditando.imagenRuta || bannerEditando.imagen || ''}
+                      onChange={(e) => setBannerEditando({ ...bannerEditando, imagenRuta: e.target.value, imagen: e.target.value })}
+                    />
+                    <p className="note">La imagen debe existir dentro de public/. Ejemplo válido: /productos/portada2-01.png</p>
                     <select value={bannerEditando.ubicacion || 'hero-principal'} onChange={(e) => setBannerEditando({ ...bannerEditando, ubicacion: e.target.value })}>
                       {opcionesUbicacionBanner.map((opcion) => (
                         <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
@@ -436,7 +475,7 @@ export default function AdminPanel() {
                       ))}
                     </select>
                     <label className="switch-row"><input type="checkbox" checked={bannerEditando.activo !== false} onChange={(e) => setBannerEditando({ ...bannerEditando, activo: e.target.checked })} /> Banner activo</label>
-                    <div className="edit-actions"><button type="button" onClick={() => { actualizarBanner(bannerEditando); setBannerEditando(null); }}>Guardar cambios</button><button type="button" className="btn-outline" onClick={() => setBannerEditando(null)}>Cancelar</button></div>
+                    <div className="edit-actions"><button type="button" onClick={() => { const bannerPreparado = prepararBannerParaGuardar(bannerEditando); if (!bannerPreparado.imagenRuta) return alert('Escribí una ruta pública de imagen. Ejemplo: /productos/portada2-01.png'); actualizarBanner(bannerPreparado); setBannerEditando(null); }}>Guardar cambios</button><button type="button" className="btn-outline" onClick={() => setBannerEditando(null)}>Cancelar</button></div>
                   </div>
                 )}
               </article>

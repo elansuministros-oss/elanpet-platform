@@ -33,7 +33,8 @@ const bannersIniciales = [
     ubicacion: 'hero-principal',
     link: 'catalogo',
     activo: true,
-    imagen: '/productos/producto-04.jpg',
+    imagen: '/productos/portada2-01.png',
+    imagenRuta: '/productos/portada2-01.png',
     createdAt: 1,
     actualizadoEn: 1,
   },
@@ -130,6 +131,39 @@ export const etiquetasEstado = {
   cancelado: 'Cancelado',
 };
 
+
+function esDataUrl(valor) {
+  return String(valor || '').trim().startsWith('data:image/');
+}
+
+function limpiarRutaPublica(valor) {
+  const texto = String(valor || '').trim();
+  if (!texto) return '';
+  if (esDataUrl(texto)) return '';
+  if (texto.startsWith('http://') || texto.startsWith('https://')) return texto;
+  return texto.startsWith('/') ? texto : `/${texto}`;
+}
+
+function normalizarBanner(banner = {}) {
+  const rutaPublica = limpiarRutaPublica(
+    banner.imagenRuta || banner.rutaImagen || banner.imagenPublica || banner.imagen
+  );
+
+  return {
+    ...banner,
+    imagenRuta: rutaPublica,
+    imagen: rutaPublica,
+    activo: banner.activo !== false,
+    ubicacion: banner.ubicacion || 'hero-principal',
+    link: banner.link || 'catalogo',
+  };
+}
+
+function normalizarBanners(lista, valorInicial = []) {
+  const origen = Array.isArray(lista) && lista.length ? lista : valorInicial;
+  return origen.map(normalizarBanner);
+}
+
 function leerStorage(clave, valorInicial) {
   try {
     const guardado = localStorage.getItem(clave);
@@ -138,12 +172,8 @@ function leerStorage(clave, valorInicial) {
 
     const datos = JSON.parse(guardado);
 
-    // Protección ELANPET:
-    // Si por error localStorage guarda banners como arreglo vacío [],
-    // no se toma como dato válido. Se recuperan los banners iniciales
-    // para que Admin y Home no queden vacíos al refrescar con F5.
-    if (clave === 'elanpet_banners' && Array.isArray(datos) && datos.length === 0) {
-      return valorInicial;
+    if (clave === 'elanpet_banners') {
+      return normalizarBanners(datos, valorInicial);
     }
 
     return datos;
@@ -947,18 +977,20 @@ export function AppProvider({ children }) {
 
   const crearBanner = (banner) =>
     setBanners((prev) => {
-      const nuevoBanner = {
+      const nuevoBanner = normalizarBanner({
         ...banner,
         id: `banner-${Date.now()}`,
         activo: banner.activo ?? true,
         createdAt: Date.now(),
         actualizadoEn: Date.now(),
-      };
+      });
+
+      const bannersPrevios = normalizarBanners(prev, []);
 
       if (nuevoBanner.activo && nuevoBanner.ubicacion === 'hero-principal') {
         return [
           nuevoBanner,
-          ...prev.map((b) =>
+          ...bannersPrevios.map((b) =>
             b.ubicacion === 'hero-principal'
               ? { ...b, activo: false }
               : b
@@ -966,32 +998,36 @@ export function AppProvider({ children }) {
         ];
       }
 
-      return [nuevoBanner, ...prev];
+      return [nuevoBanner, ...bannersPrevios];
     });
 
   const actualizarBanner = (banner) =>
-    setBanners((prev) =>
-      prev.map((b) => {
+    setBanners((prev) => {
+      const bannerNormalizado = normalizarBanner({
+        ...banner,
+        actualizadoEn: Date.now(),
+      });
+
+      return normalizarBanners(prev, []).map((b) => {
         if (
-          banner.activo &&
-          banner.ubicacion === 'hero-principal' &&
+          bannerNormalizado.activo &&
+          bannerNormalizado.ubicacion === 'hero-principal' &&
           b.ubicacion === 'hero-principal' &&
-          b.id !== banner.id
+          b.id !== bannerNormalizado.id
         ) {
           return { ...b, activo: false };
         }
 
-        if (b.id === banner.id) {
+        if (b.id === bannerNormalizado.id) {
           return {
             ...b,
-            ...banner,
-            actualizadoEn: Date.now(),
+            ...bannerNormalizado,
           };
         }
 
         return b;
-      })
-    );
+      });
+    });
   const eliminarBanner = (id) => setBanners((prev) => prev.filter((b) => b.id !== id));
 
   const crearTrabajo = (trabajo) => setTrabajos((prev) => [{ ...trabajo, id: `trabajo-${Date.now()}`, activo: true }, ...prev]);

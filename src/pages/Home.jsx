@@ -7,6 +7,7 @@ export default function Home({ setPage }) {
   const { banners } = useApp();
 
   const heroBanner =
+    banners?.find((banner) => banner.activo && banner.ubicacion === 'hero-principal') ||
     banners?.find((banner) => banner.activo && banner.ubicacion === 'slider-home') ||
     banners?.find((banner) => banner.activo && banner.ubicacion === 'home') ||
     {};

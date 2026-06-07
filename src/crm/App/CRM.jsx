@@ -3,6 +3,16 @@ import { useCore } from '../../core/context/CoreContext';
 
 import DashboardCRM from '../DashboardCRM';
 import NotificacionesCRM from '../NotificacionesCRM';
+import DashboardGerencial from '../DashboardGerencial';
+import AutomatizacionesCRM from '../AutomatizacionesCRM';
+import CRMComercialAvanzado from '../CRMComercialAvanzado';
+import MetasKPIs from '../MetasKPIs';
+import CalendarioCorporativo from '../CalendarioCorporativo';
+import DocumentosCorporativos from '../DocumentosCorporativos';
+import PortalClienteCRM from '../PortalClienteCRM';
+import PortalProduccionCRM from '../PortalProduccionCRM';
+import AppMovilCRM from '../AppMovilCRM';
+import ElanAI from '../ElanAI';
 import Empresas from '../Empresas';
 import Contactos from '../Contactos';
 import Clientes from '../Clientes';
@@ -43,6 +53,7 @@ export default function CRM() {
         grupo: 'General',
         items: [
           { id: 'dashboard', label: 'Dashboard', icono: '📊', componente: <DashboardCRM /> },
+          { id: 'dashboard-gerencial', label: 'Dashboard Gerencial', icono: '🧭', componente: <DashboardGerencial /> },
           { id: 'notificaciones', label: 'Notificaciones', icono: '🔔', componente: <NotificacionesCRM /> },
         ],
       },
@@ -55,6 +66,7 @@ export default function CRM() {
           { id: 'proveedores', label: 'Proveedores', icono: '🚚', componente: <Proveedores /> },
           { id: 'compras', label: 'Compras', icono: '🧾', componente: <Compras /> },
           { id: 'seguimiento', label: 'Seguimiento', icono: '📌', componente: <SeguimientoCRM /> },
+          { id: 'crm-comercial', label: 'CRM Comercial', icono: '🎯', componente: <CRMComercialAvanzado /> },
         ],
       },
       {
@@ -86,6 +98,7 @@ export default function CRM() {
           { id: 'comisiones', label: 'Comisiones', icono: '💵', componente: <Comisiones /> },
           { id: 'reportes', label: 'Reportes', icono: '📈', componente: <ReportesCRM /> },
           { id: 'fiscal', label: 'Fiscal', icono: '🧮', componente: <FiscalCRM /> },
+          { id: 'metas-kpis', label: 'Metas y KPIs', icono: '🏁', componente: <MetasKPIs /> },
         ],
       },
       {
@@ -93,6 +106,16 @@ export default function CRM() {
         items: [
           { id: 'veterinarias', label: 'Veterinarias', icono: '🐾', componente: <VeterinariasCRM /> },
           { id: 'afiliados', label: 'Afiliados', icono: '🔗', componente: <Afiliados /> },
+          { id: 'portal-cliente', label: 'Portal Cliente', icono: '👥', componente: <PortalClienteCRM /> },
+          { id: 'portal-produccion', label: 'Portal Producción', icono: '🏗️', componente: <PortalProduccionCRM /> },
+        ],
+      },
+
+      {
+        grupo: 'Tecnología',
+        items: [
+          { id: 'app-movil', label: 'App Móvil', icono: '📱', componente: <AppMovilCRM /> },
+          { id: 'elan-ai', label: 'ELAN AI', icono: '🤖', componente: <ElanAI /> },
         ],
       },
       {
@@ -100,6 +123,9 @@ export default function CRM() {
         items: [
           { id: 'usuarios-permisos', label: 'Usuarios y Permisos', icono: '🔐', componente: <UsuariosPermisos /> },
           { id: 'auditoria', label: 'Auditoría', icono: '🧾', componente: <AuditoriaCRM /> },
+          { id: 'automatizaciones', label: 'Automatizaciones', icono: '⚙️', componente: <AutomatizacionesCRM /> },
+          { id: 'calendario', label: 'Calendario', icono: '📅', componente: <CalendarioCorporativo /> },
+          { id: 'documentos', label: 'Documentos', icono: '🗂️', componente: <DocumentosCorporativos /> },
         ],
       },
     ],

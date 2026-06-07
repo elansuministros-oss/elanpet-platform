@@ -26,10 +26,61 @@ const configuracionInicial = {
 const cuentasIniciales = [];
 
 const bannersIniciales = [
-  { id: 'slide-1', titulo: 'Muebles funcionales para mascotas felices', subtitulo: 'Casas, camas, comederos y torres fabricadas para durar.', ubicacion: 'slider-home', link: 'catalogo', activo: true, imagen: '/productos/producto-04.jpg' },
-  { id: 'slide-2', titulo: 'Compra desde tu veterinaria de confianza', subtitulo: 'Cada QR registra el origen del pedido y mantiene todo organizado.', ubicacion: 'slider-home', link: 'catalogo', activo: true, imagen: '/productos/producto-05.jpg' },
-  { id: 'slide-3', titulo: 'Productos destacados para perros y gatos', subtitulo: 'Diseños pensados para comodidad, orden y bienestar diario.', ubicacion: 'slider-home', link: 'catalogo', activo: true, imagen: '/productos/producto-10.jpg' },
-  { id: 'promo-1', titulo: 'Promoción destacada', subtitulo: 'Descuentos automáticos por cantidad en productos seleccionados.', ubicacion: 'home', link: 'catalogo', activo: true, imagen: '' },
+  {
+    id: 'hero-principal-default',
+    titulo: 'Tu mascota merece más',
+    subtitulo: 'Muebles funcionales, resistentes y fabricados para el bienestar de perros y gatos.',
+    ubicacion: 'hero-principal',
+    link: 'catalogo',
+    activo: true,
+    imagen: '/productos/producto-04.jpg',
+    createdAt: 1,
+    actualizadoEn: 1,
+  },
+  {
+    id: 'slide-1',
+    titulo: 'Muebles funcionales para mascotas felices',
+    subtitulo: 'Casas, camas, comederos y torres fabricadas para durar.',
+    ubicacion: 'slider-home',
+    link: 'catalogo',
+    activo: false,
+    imagen: '/productos/producto-04.jpg',
+    createdAt: 2,
+    actualizadoEn: 2,
+  },
+  {
+    id: 'slide-2',
+    titulo: 'Compra desde tu veterinaria de confianza',
+    subtitulo: 'Cada QR registra el origen del pedido y mantiene todo organizado.',
+    ubicacion: 'slider-home',
+    link: 'catalogo',
+    activo: false,
+    imagen: '/productos/producto-05.jpg',
+    createdAt: 3,
+    actualizadoEn: 3,
+  },
+  {
+    id: 'slide-3',
+    titulo: 'Productos destacados para perros y gatos',
+    subtitulo: 'Diseños pensados para comodidad, orden y bienestar diario.',
+    ubicacion: 'slider-home',
+    link: 'catalogo',
+    activo: false,
+    imagen: '/productos/producto-10.jpg',
+    createdAt: 4,
+    actualizadoEn: 4,
+  },
+  {
+    id: 'promo-1',
+    titulo: 'Promoción destacada',
+    subtitulo: 'Descuentos automáticos por cantidad en productos seleccionados.',
+    ubicacion: 'home',
+    link: 'catalogo',
+    activo: false,
+    imagen: '',
+    createdAt: 5,
+    actualizadoEn: 5,
+  },
 ];
 
 const trabajosIniciales = [
@@ -82,7 +133,20 @@ export const etiquetasEstado = {
 function leerStorage(clave, valorInicial) {
   try {
     const guardado = localStorage.getItem(clave);
-    return guardado ? JSON.parse(guardado) : valorInicial;
+
+    if (!guardado) return valorInicial;
+
+    const datos = JSON.parse(guardado);
+
+    // Protección ELANPET:
+    // Si por error localStorage guarda banners como arreglo vacío [],
+    // no se toma como dato válido. Se recuperan los banners iniciales
+    // para que Admin y Home no queden vacíos al refrescar con F5.
+    if (clave === 'elanpet_banners' && Array.isArray(datos) && datos.length === 0) {
+      return valorInicial;
+    }
+
+    return datos;
   } catch {
     return valorInicial;
   }
@@ -881,8 +945,30 @@ export function AppProvider({ children }) {
     setProductos((prev) => [{ ...producto, id, precio: Number(producto.precio || 0), activo: true }, ...prev]);
   };
 
-  const crearBanner = (banner) => setBanners((prev) => [{ ...banner, id: `banner-${Date.now()}` }, ...prev]);
-  const actualizarBanner = (banner) => setBanners((prev) => prev.map((b) => (b.id === banner.id ? { ...b, ...banner } : b)));
+  const crearBanner = (banner) =>
+    setBanners((prev) => [
+      {
+        ...banner,
+        id: `banner-${Date.now()}`,
+        activo: banner.activo ?? true,
+        createdAt: Date.now(),
+        actualizadoEn: Date.now(),
+      },
+      ...prev,
+    ]);
+
+  const actualizarBanner = (banner) =>
+    setBanners((prev) =>
+      prev.map((b) =>
+        b.id === banner.id
+          ? {
+              ...b,
+              ...banner,
+              actualizadoEn: Date.now(),
+            }
+          : b
+      )
+    );
   const eliminarBanner = (id) => setBanners((prev) => prev.filter((b) => b.id !== id));
 
   const crearTrabajo = (trabajo) => setTrabajos((prev) => [{ ...trabajo, id: `trabajo-${Date.now()}`, activo: true }, ...prev]);

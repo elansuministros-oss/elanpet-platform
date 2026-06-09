@@ -30,6 +30,7 @@ import ReportesCRM from '../ReportesCRM';
 import FiscalCRM from '../FiscalCRM';
 import CentroUtilidades from '../CentroUtilidades';
 import EstadoFinanciero from '../EstadoFinanciero';
+import ExportadorCRMCentral from '../ExportadorCRMCentral';
 
 import Pedidos from '../Pedidos';
 import Produccion from '../Produccion';
@@ -118,6 +119,7 @@ export default function CRM() {
         items: [
           { id: 'app-movil', label: 'App Móvil', icono: '📱', componente: <AppMovilCRM /> },
           { id: 'elan-ai', label: 'ELAN AI', icono: '🤖', componente: <ElanAI /> },
+          { id: 'exportador-crm-central', label: 'Exportador CRM Central', icono: '📤', componente: <ExportadorCRMCentral /> },
         ],
       },
       {

@@ -190,6 +190,45 @@ function guardarStorage(clave, valor) {
   }
 }
 
+
+const APP_STATE_TABLE = 'elanpet_app_state';
+const APP_STATE_ID = 'global';
+
+function construirEstadoCompartido({
+  configuracion,
+  cuentasBancarias,
+  banners,
+  trabajos,
+  productos,
+  imagenes,
+}) {
+  return {
+    configuracion: {
+      ...configuracionInicial,
+      ...(configuracion || {}),
+    },
+    cuentasBancarias: Array.isArray(cuentasBancarias) ? cuentasBancarias : cuentasIniciales,
+    banners: normalizarBanners(banners, bannersIniciales),
+    trabajos: Array.isArray(trabajos) ? trabajos : trabajosIniciales,
+    productos: Array.isArray(productos) ? productos : productosIniciales,
+    imagenes: Array.isArray(imagenes) ? imagenes : [],
+    actualizadoEn: new Date().toISOString(),
+  };
+}
+
+function estadoCompartidoTieneDatos(data) {
+  if (!data || typeof data !== 'object') return false;
+
+  return Boolean(
+    (Array.isArray(data.productos) && data.productos.length > 0) ||
+      (Array.isArray(data.banners) && data.banners.length > 0) ||
+      (Array.isArray(data.trabajos) && data.trabajos.length > 0) ||
+      (Array.isArray(data.imagenes) && data.imagenes.length > 0) ||
+      (Array.isArray(data.cuentasBancarias) && data.cuentasBancarias.length > 0) ||
+      (data.configuracion && Object.keys(data.configuracion).length > 0)
+  );
+}
+
 function generarCodigoSeguimiento() {
   const year = new Date().getFullYear();
   const correlativo = String(Date.now()).slice(-6);
@@ -416,6 +455,7 @@ export function AppProvider({ children }) {
   const [usuario, setUsuario] = useState(() => leerStorage('elanpet_usuario_actual', null));
   const [usuarios, setUsuarios] = useState(() => asegurarUsuariosBase(leerStorage('elanpet_usuarios', usuariosIniciales)));
   const [supabaseListo, setSupabaseListo] = useState(false);
+  const [estadoCompartidoCargado, setEstadoCompartidoCargado] = useState(false);
 
   useEffect(() => guardarStorage('elanpet_configuracion', configuracion), [configuracion]);
   useEffect(() => guardarStorage('elanpet_cuentas_bancarias', cuentasBancarias), [cuentasBancarias]);
@@ -436,6 +476,137 @@ export function AppProvider({ children }) {
     if (veterinaria) guardarStorage('elanpet_veterinaria_actual', veterinaria);
     else localStorage.removeItem('elanpet_veterinaria_actual');
   }, [veterinaria]);
+
+  useEffect(() => {
+    let activo = true;
+
+    const cargarEstadoCompartido = async () => {
+      if (!supabase) {
+        setEstadoCompartidoCargado(true);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from(APP_STATE_TABLE)
+          .select('data')
+          .eq('id', APP_STATE_ID)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const remoto = data?.data;
+
+        if (estadoCompartidoTieneDatos(remoto)) {
+          if (!activo) return;
+
+          setConfiguracion({
+            ...configuracionInicial,
+            ...(remoto.configuracion || {}),
+          });
+
+          setCuentasBancarias(
+            Array.isArray(remoto.cuentasBancarias)
+              ? remoto.cuentasBancarias
+              : cuentasIniciales
+          );
+
+          setBanners(normalizarBanners(remoto.banners, bannersIniciales));
+
+          setTrabajos(
+            Array.isArray(remoto.trabajos)
+              ? remoto.trabajos
+              : trabajosIniciales
+          );
+
+          setProductos(
+            Array.isArray(remoto.productos)
+              ? remoto.productos
+              : productosIniciales
+          );
+
+          setImagenes(
+            Array.isArray(remoto.imagenes)
+              ? remoto.imagenes
+              : []
+          );
+        } else {
+          const estadoInicialCompartido = construirEstadoCompartido({
+            configuracion,
+            cuentasBancarias,
+            banners,
+            trabajos,
+            productos,
+            imagenes,
+          });
+
+          await supabase
+            .from(APP_STATE_TABLE)
+            .upsert(
+              {
+                id: APP_STATE_ID,
+                data: estadoInicialCompartido,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'id' }
+            );
+        }
+
+        if (activo) setEstadoCompartidoCargado(true);
+      } catch (error) {
+        console.error('Error cargando estado compartido ELANPET:', error);
+        if (activo) setEstadoCompartidoCargado(true);
+      }
+    };
+
+    cargarEstadoCompartido();
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !estadoCompartidoCargado) return;
+
+    const timer = window.setTimeout(async () => {
+      const estadoCompartido = construirEstadoCompartido({
+        configuracion,
+        cuentasBancarias,
+        banners,
+        trabajos,
+        productos,
+        imagenes,
+      });
+
+      try {
+        const { error } = await supabase
+          .from(APP_STATE_TABLE)
+          .upsert(
+            {
+              id: APP_STATE_ID,
+              data: estadoCompartido,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' }
+          );
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error guardando estado compartido ELANPET:', error);
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    estadoCompartidoCargado,
+    configuracion,
+    cuentasBancarias,
+    banners,
+    trabajos,
+    productos,
+    imagenes,
+  ]);
 
   useEffect(() => {
     let activo = true;
@@ -1098,3 +1269,4 @@ export function AppProvider({ children }) {
 }
 
 export const useApp = () => useContext(AppContext);
+
